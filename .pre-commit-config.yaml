@@ -1,0 +1,41 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.6
+    hooks:
+      - id: codespell
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.14
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix, --show-fixes]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: loq
+        name: loq (file size limits)
+        entry: uv run loq
+        language: system
+        pass_filenames: false
+      - id: pyright
+        name: pyright (uncalled_for package)
+        entry: uv run pyright --verifytypes uncalled_for --ignoreexternal
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: pyright
+        name: pyright (source and tests)
+        entry: uv run pyright tests
+        language: system
+        types: [python]
+        pass_filenames: false

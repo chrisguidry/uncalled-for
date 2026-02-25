@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        include:
+          - python-version: "3.10"
+            cov-threshold: 100
+          # Python 3.11 coverage reporting is unstable
+          - python-version: "3.11"
+            cov-threshold: 98
+          - python-version: "3.12"
+            cov-threshold: 100
+          - python-version: "3.13"
+            cov-threshold: 100
+          - python-version: "3.14"
+            cov-threshold: 100
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv and set Python version
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run tests
+        run: >
+          uv run pytest
+          --cov-branch
+          --cov-fail-under=${{ matrix.cov-threshold }}
+          --cov-report=xml
+          --cov-report=term-missing:skip-covered
+
+  prek:
+    name: Prek checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv and set Python version
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.10"
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run prek
+        uses: j178/prek-action@v1
