@@ -64,7 +64,12 @@ class Dependency(abc.ABC, Generic[T]):
     @abc.abstractmethod
     async def __aenter__(self) -> T: ...
 
-    async def __aexit__(self, *args: object) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         pass
 
 
