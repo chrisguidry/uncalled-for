@@ -83,23 +83,22 @@ def test_duplicate_concrete_type_names_the_concrete_type() -> None:
     """Two instances of the same single type: error names the concrete type,
     not an ancestor, and is deterministic across runs."""
 
-    class _Handler(Dependency[str]):
+    class Handler(Dependency["Handler"]):
         single = True
 
-        async def __aenter__(self) -> str: ...
+        async def __aenter__(self) -> Handler:
+            return self
 
-    class _Retry(_Handler):
-        async def __aenter__(self) -> str: ...
-
-    def Retry() -> str:
-        return cast(str, _Retry())
+    class Retry(Handler):
+        async def __aenter__(self) -> Retry:
+            return self
 
     async def my_func(
-        a: str = Retry(),
-        b: str = Retry(),
+        a: Retry = Retry(),
+        b: Retry = Retry(),
     ) -> None: ...
 
-    with pytest.raises(ValueError, match="Only one _Retry dependency is allowed$"):
+    with pytest.raises(ValueError, match="Only one Retry dependency is allowed$"):
         validate_dependencies(my_func)
 
 
@@ -107,31 +106,28 @@ def test_different_subclasses_of_single_base_names_the_base() -> None:
     """Two different subclasses of a single base: error names the shared
     base and lists both concrete types."""
 
-    class _Runtime(Dependency[str]):
+    class Runtime(Dependency["Runtime"]):
         single = True
 
-        async def __aenter__(self) -> str: ...
+        async def __aenter__(self) -> Runtime:
+            return self
 
-    class _Timeout(_Runtime):
-        async def __aenter__(self) -> str: ...
+    class Timeout(Runtime):
+        async def __aenter__(self) -> Timeout:
+            return self
 
-    class _Deadline(_Runtime):
-        async def __aenter__(self) -> str: ...
-
-    def Timeout() -> str:
-        return cast(str, _Timeout())
-
-    def Deadline() -> str:
-        return cast(str, _Deadline())
+    class Deadline(Runtime):
+        async def __aenter__(self) -> Deadline:
+            return self
 
     async def my_func(
-        a: str = Timeout(),
-        b: str = Deadline(),
+        a: Timeout = Timeout(),
+        b: Deadline = Deadline(),
     ) -> None: ...
 
     with pytest.raises(
         ValueError,
-        match=r"Only one _Runtime dependency is allowed, but found: .+",
+        match=r"Only one Runtime dependency is allowed, but found: .+",
     ):
         validate_dependencies(my_func)
 

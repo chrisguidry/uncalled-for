@@ -74,17 +74,17 @@ class Dependency(abc.ABC, Generic[T]):
         pass
 
 
-_parameter_cache: dict[Callable[..., Any], dict[str, Dependency[object]]] = {}
+_parameter_cache: dict[Callable[..., Any], dict[str, Dependency[Any]]] = {}
 
 
 def get_dependency_parameters(
     function: Callable[..., Any],
-) -> dict[str, Dependency[object]]:
+) -> dict[str, Dependency[Any]]:
     """Find parameters whose defaults are Dependency instances."""
     if function in _parameter_cache:
         return _parameter_cache[function]
 
-    dependencies: dict[str, Dependency[object]] = {}
+    dependencies: dict[str, Dependency[Any]] = {}
     signature = get_signature(function)
 
     for name, param in signature.parameters.items():
@@ -310,7 +310,7 @@ def validate_dependencies(function: Callable[..., Any]) -> None:
 
     # Phase 1: check for duplicate concrete types.  This catches e.g. two
     # Retry(...) defaults and reports "Only one Retry dependency is allowed".
-    counts: Counter[type[Dependency[object]]] = Counter(
+    counts: Counter[type[Dependency[Any]]] = Counter(
         type(d)
         for d in dependencies  # pyright: ignore[reportUnknownArgumentType]
     )
@@ -322,7 +322,7 @@ def validate_dependencies(function: Callable[..., Any]) -> None:
 
     # Phase 2: check for conflicts between *different* subclasses that share
     # a single base (e.g. Timeout + CustomRuntime both under Runtime).
-    single_bases: set[type[Dependency[object]]] = set()
+    single_bases: set[type[Dependency[Any]]] = set()
     for dependency in dependencies:
         for cls in type(dependency).__mro__:
             if (
