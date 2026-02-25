@@ -9,6 +9,7 @@ from __future__ import annotations
 import abc
 import asyncio
 import inspect
+from collections import Counter
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from functools import lru_cache
 from contextlib import (
@@ -73,17 +74,17 @@ class Dependency(abc.ABC, Generic[T]):
         pass
 
 
-_parameter_cache: dict[Callable[..., Any], dict[str, Dependency[object]]] = {}
+_parameter_cache: dict[Callable[..., Any], dict[str, Dependency[Any]]] = {}
 
 
 def get_dependency_parameters(
     function: Callable[..., Any],
-) -> dict[str, Dependency[object]]:
+) -> dict[str, Dependency[Any]]:
     """Find parameters whose defaults are Dependency instances."""
     if function in _parameter_cache:
         return _parameter_cache[function]
 
-    dependencies: dict[str, Dependency[object]] = {}
+    dependencies: dict[str, Dependency[Any]] = {}
     signature = get_signature(function)
 
     for name, param in signature.parameters.items():
@@ -299,11 +300,29 @@ def validate_dependencies(function: Callable[..., Any]) -> None:
 
     Raises ``ValueError`` if multiple dependencies with ``single=True``
     share the same type or base class.
+
+    Concrete-type duplicates are checked first so the error message names
+    the exact type (e.g. "Retry") rather than an abstract ancestor
+    (e.g. "FailureHandler").
     """
     parameters = get_dependency_parameters(function)
     dependencies = list(parameters.values())
 
-    single_bases: set[type[Dependency[object]]] = set()
+    # Phase 1: check for duplicate concrete types.  This catches e.g. two
+    # Retry(...) defaults and reports "Only one Retry dependency is allowed".
+    counts: Counter[type[Dependency[Any]]] = Counter(
+        type(d)
+        for d in dependencies  # pyright: ignore[reportUnknownArgumentType]
+    )
+    for dep_type, count in counts.items():
+        if getattr(dep_type, "single", False) and count > 1:  # pyright: ignore[reportUnknownArgumentType]
+            raise ValueError(
+                f"Only one {dep_type.__name__} dependency is allowed"  # pyright: ignore[reportUnknownArgumentType,reportUnknownMemberType]
+            )
+
+    # Phase 2: check for conflicts between *different* subclasses that share
+    # a single base (e.g. Timeout + CustomRuntime both under Runtime).
+    single_bases: set[type[Dependency[Any]]] = set()
     for dependency in dependencies:
         for cls in type(dependency).__mro__:
             if (

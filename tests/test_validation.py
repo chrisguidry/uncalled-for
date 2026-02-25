@@ -48,7 +48,7 @@ def test_duplicate_single_type_raises() -> None:
         b: str = SingleDep(),
     ) -> None: ...
 
-    with pytest.raises(ValueError, match="Only one _SingleDep"):
+    with pytest.raises(ValueError, match="Only one _SingleDep dependency is allowed"):
         validate_dependencies(my_func)
 
 
@@ -76,6 +76,54 @@ def test_single_base_class_conflict() -> None:
     ) -> None: ...
 
     with pytest.raises(ValueError, match="Only one _Runtime"):
+        validate_dependencies(my_func)
+
+
+def test_duplicate_concrete_type_names_the_concrete_type() -> None:
+    """Two instances of the same single type: error names the concrete type,
+    not an ancestor, and is deterministic across runs."""
+
+    class Handler(Dependency["Handler"]):
+        single = True
+
+        async def __aenter__(self) -> Handler: ...
+
+    class Retry(Handler):
+        async def __aenter__(self) -> Retry: ...
+
+    async def my_func(
+        a: Retry = Retry(),
+        b: Retry = Retry(),
+    ) -> None: ...
+
+    with pytest.raises(ValueError, match="Only one Retry dependency is allowed$"):
+        validate_dependencies(my_func)
+
+
+def test_different_subclasses_of_single_base_names_the_base() -> None:
+    """Two different subclasses of a single base: error names the shared
+    base and lists both concrete types."""
+
+    class Runtime(Dependency["Runtime"]):
+        single = True
+
+        async def __aenter__(self) -> Runtime: ...
+
+    class Timeout(Runtime):
+        async def __aenter__(self) -> Timeout: ...
+
+    class Deadline(Runtime):
+        async def __aenter__(self) -> Deadline: ...
+
+    async def my_func(
+        a: Timeout = Timeout(),
+        b: Deadline = Deadline(),
+    ) -> None: ...
+
+    with pytest.raises(
+        ValueError,
+        match=r"Only one Runtime dependency is allowed, but found: .+",
+    ):
         validate_dependencies(my_func)
 
 
