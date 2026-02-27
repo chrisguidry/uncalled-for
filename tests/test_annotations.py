@@ -41,9 +41,6 @@ class _Tracker(Dependency["_Tracker"]):
 tracker_instance = _Tracker()
 
 
-# --- get_annotation_dependencies ---
-
-
 def test_finds_dependency_in_annotated_metadata() -> None:
     dep = _Tracker()
 
@@ -133,9 +130,6 @@ def test_handles_unresolvable_hints() -> None:
     assert result == {}
 
 
-# --- bind_to_parameter ---
-
-
 def test_default_bind_returns_self() -> None:
     class _Plain(Dependency[str]):
         async def __aenter__(self) -> str: ...
@@ -153,9 +147,6 @@ def test_subclass_bind_creates_copy() -> None:
     assert bound.bound_name == "customer_id"
     assert bound.bound_value == 99
     assert dep.bound_name is None
-
-
-# --- resolved_dependencies with annotations ---
 
 
 async def test_annotation_deps_entered_and_exited() -> None:
@@ -250,9 +241,6 @@ async def test_annotation_dep_error_propagates() -> None:
             ...
 
 
-# --- validate_dependencies with annotations ---
-
-
 def test_single_annotation_dep_per_param_is_valid() -> None:
     dep = _Tracker()
 
@@ -280,9 +268,6 @@ def test_single_annotation_dep_on_different_params_is_valid() -> None:
     ) -> None: ...
 
     validate_dependencies(my_func)
-
-
-# --- without_dependencies with annotations ---
 
 
 async def test_without_dependencies_wraps_annotation_only_functions() -> None:
