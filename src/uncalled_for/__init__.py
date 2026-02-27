@@ -6,7 +6,6 @@ the function is called through the dependency resolution context manager.
 
 from __future__ import annotations
 
-import abc
 import asyncio
 import inspect
 from collections import Counter
@@ -20,9 +19,11 @@ from contextlib import (
 )
 from contextvars import ContextVar
 from types import TracebackType
-from typing import Any, ClassVar, Generic, TypeVar, cast, overload
+from typing import Any, ClassVar, TypeVar, cast, overload
 
-T = TypeVar("T", covariant=True)
+from ._annotations import get_annotation_dependencies
+from ._base import Dependency
+
 R = TypeVar("R")
 
 DependencyFactory = Callable[
@@ -46,32 +47,6 @@ def get_signature(function: Callable[..., Any]) -> inspect.Signature:
     signature = inspect.signature(function)
     _signature_cache[function] = signature
     return signature
-
-
-class Dependency(abc.ABC, Generic[T]):
-    """Base class for all injectable dependencies.
-
-    Subclasses implement ``__aenter__`` to produce the injected value and
-    optionally ``__aexit__`` for cleanup. The resolution engine enters each
-    dependency as an async context manager, so resources are cleaned up in
-    reverse order when the call completes.
-
-    Set ``single = True`` on a subclass to enforce that only one instance
-    of that dependency type may appear in a function's signature.
-    """
-
-    single: bool = False
-
-    @abc.abstractmethod
-    async def __aenter__(self) -> T: ...
-
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        pass
 
 
 _parameter_cache: dict[Callable[..., Any], dict[str, Dependency[Any]]] = {}
@@ -341,6 +316,20 @@ def validate_dependencies(function: Callable[..., Any]) -> None:
                 f"but found: {types}"
             )
 
+    # Phase 3: check annotation deps per-parameter.
+    annotation_deps = get_annotation_dependencies(function)
+    for param_name, deps in annotation_deps.items():
+        ann_counts: Counter[type[Dependency[Any]]] = Counter(
+            type(d)
+            for d in deps  # pyright: ignore[reportUnknownArgumentType]
+        )
+        for dep_type, count in ann_counts.items():
+            if getattr(dep_type, "single", False) and count > 1:  # pyright: ignore[reportUnknownArgumentType]
+                raise ValueError(
+                    f"Only one {dep_type.__name__} annotation dependency "  # pyright: ignore[reportUnknownArgumentType,reportUnknownMemberType]
+                    f"is allowed per parameter, but found {count} on '{param_name}'"
+                )
+
 
 class FailedDependency:
     """Placeholder for a dependency that raised during resolution."""
@@ -386,6 +375,13 @@ async def resolved_dependencies(
                     except Exception as error:
                         arguments[parameter] = FailedDependency(parameter, error)
 
+                annotation_deps = get_annotation_dependencies(function)
+                for param_name, deps in annotation_deps.items():
+                    value = provided.get(param_name, arguments.get(param_name))
+                    for dep in deps:
+                        bound = dep.bind_to_parameter(param_name, value)
+                        await stack.enter_async_context(bound)
+
                 yield arguments
             finally:
                 _Depends.stack.reset(stack_token)
@@ -402,7 +398,8 @@ def without_dependencies(fn: Callable[..., Any]) -> Callable[..., Any]:
     automatically and forwards user-supplied keyword arguments.
     """
     dep_names = set(get_dependency_parameters(fn))
-    if not dep_names:
+    annotation_deps = get_annotation_dependencies(fn)
+    if not dep_names and not annotation_deps:
         return fn
 
     original_sig = get_signature(fn)
@@ -441,6 +438,7 @@ __all__ = [
     "FailedDependency",
     "Shared",
     "SharedContext",
+    "get_annotation_dependencies",
     "get_dependency_parameters",
     "get_signature",
     "resolved_dependencies",
