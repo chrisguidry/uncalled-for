@@ -6,9 +6,9 @@ from collections import Counter
 from collections.abc import Callable
 from typing import Any
 
-from ._annotations import get_annotation_dependencies
-from ._base import Dependency
-from ._introspection import get_dependency_parameters
+from .annotations import get_annotation_dependencies
+from .base import Dependency
+from .introspection import get_dependency_parameters
 
 
 def validate_dependencies(function: Callable[..., Any]) -> None:

@@ -8,9 +8,9 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from functools import lru_cache
 from typing import Any
 
-from ._annotations import get_annotation_dependencies
-from ._functional import _Depends
-from ._introspection import get_dependency_parameters, get_signature
+from .annotations import get_annotation_dependencies
+from .functional import _Depends
+from .introspection import get_dependency_parameters, get_signature
 
 
 class FailedDependency:

@@ -13,8 +13,8 @@ from contextvars import ContextVar
 from types import TracebackType
 from typing import Any, ClassVar, TypeVar, cast, overload
 
-from ._functional import DependencyFactory, _FunctionalDependency
-from ._introspection import get_dependency_parameters
+from .functional import DependencyFactory, _FunctionalDependency
+from .introspection import get_dependency_parameters
 
 R = TypeVar("R")
 

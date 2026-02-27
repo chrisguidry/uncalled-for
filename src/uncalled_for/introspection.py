@@ -6,7 +6,7 @@ import inspect
 from collections.abc import Callable
 from typing import Any
 
-from ._base import Dependency
+from .base import Dependency
 
 _signature_cache: dict[Callable[..., Any], inspect.Signature] = {}
 

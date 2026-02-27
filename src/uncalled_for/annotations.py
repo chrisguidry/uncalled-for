@@ -6,7 +6,7 @@ from typing import Annotated, Any, get_args, get_origin, get_type_hints
 
 from collections.abc import Callable
 
-from ._base import Dependency
+from .base import Dependency
 
 _annotation_cache: dict[Callable[..., Any], dict[str, list[Dependency[Any]]]] = {}
 

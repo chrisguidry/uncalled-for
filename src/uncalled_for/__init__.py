@@ -4,17 +4,13 @@ Declare dependencies as parameter defaults. They resolve automatically when
 the function is called through the dependency resolution context manager.
 """
 
-from ._annotations import get_annotation_dependencies
-from ._base import Dependency
-from ._functional import DependencyFactory, Depends, _Depends as _Depends
-from ._introspection import (
-    get_dependency_parameters,
-    get_signature,
-    _parameter_cache as _parameter_cache,
-)
-from ._resolution import FailedDependency, resolved_dependencies, without_dependencies
-from ._shared import Shared, SharedContext
-from ._validation import validate_dependencies
+from .annotations import get_annotation_dependencies
+from .base import Dependency
+from .functional import DependencyFactory, Depends
+from .introspection import get_dependency_parameters, get_signature
+from .resolution import FailedDependency, resolved_dependencies, without_dependencies
+from .shared import Shared, SharedContext
+from .validation import validate_dependencies
 
 __all__ = [
     "Dependency",

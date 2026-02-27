@@ -12,8 +12,8 @@ from contextlib import (
 from contextvars import ContextVar
 from typing import Any, ClassVar, TypeVar, cast, overload
 
-from ._base import Dependency
-from ._introspection import get_dependency_parameters
+from .base import Dependency
+from .introspection import get_dependency_parameters
 
 R = TypeVar("R")
 
