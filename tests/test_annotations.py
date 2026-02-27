@@ -13,7 +13,7 @@ from uncalled_for import (
 )
 
 
-class _Tracker(Dependency["_Tracker"]):
+class Tracker(Dependency["Tracker"]):
     """Records enter/exit calls for testing."""
 
     single = True
@@ -24,13 +24,13 @@ class _Tracker(Dependency["_Tracker"]):
         self.bound_name: str | None = None
         self.bound_value: Any = None
 
-    def bind_to_parameter(self, name: str, value: Any) -> "_Tracker":
-        copy = _Tracker()
+    def bind_to_parameter(self, name: str, value: Any) -> "Tracker":
+        copy = Tracker()
         copy.bound_name = name
         copy.bound_value = value
         return copy
 
-    async def __aenter__(self) -> "_Tracker":
+    async def __aenter__(self) -> "Tracker":
         self.entered = True
         return self
 
@@ -38,17 +38,17 @@ class _Tracker(Dependency["_Tracker"]):
         self.exited = True
 
 
-tracker_instance = _Tracker()
+tracker_instance = Tracker()
 
 
 def test_finds_dependency_in_annotated_metadata() -> None:
-    dep = _Tracker()
+    dependency = Tracker()
 
-    async def my_func(x: Annotated[int, dep]) -> None: ...
+    async def my_func(x: Annotated[int, dependency]) -> None: ...
 
     result = get_annotation_dependencies(my_func)
     assert "x" in result
-    assert result["x"] == [dep]
+    assert result["x"] == [dependency]
 
 
 def test_ignores_plain_annotations() -> None:
@@ -66,45 +66,47 @@ def test_ignores_non_dependency_metadata() -> None:
 
 
 def test_extracts_only_dependency_metadata() -> None:
-    dep = _Tracker()
+    dependency = Tracker()
 
-    async def my_func(x: Annotated[int, "label", dep, 99]) -> None: ...
+    async def my_func(x: Annotated[int, "label", dependency, 99]) -> None: ...
 
     result = get_annotation_dependencies(my_func)
-    assert result["x"] == [dep]
+    assert result["x"] == [dependency]
 
 
-def test_multiple_deps_on_same_parameter() -> None:
-    class _DepA(Dependency[str]):
+def test_multiple_dependencies_on_same_parameter() -> None:
+    class DependencyA(Dependency[str]):
         async def __aenter__(self) -> str: ...
 
-    class _DepB(Dependency[str]):
+    class DependencyB(Dependency[str]):
         async def __aenter__(self) -> str: ...
 
-    async def my_func(x: Annotated[int, _DepA(), _DepB()]) -> None: ...
+    async def my_func(x: Annotated[int, DependencyA(), DependencyB()]) -> None: ...
 
     result = get_annotation_dependencies(my_func)
     assert len(result["x"]) == 2
 
 
-def test_deps_on_multiple_parameters() -> None:
-    dep_a = _Tracker()
-    dep_b = _Tracker()
+def test_dependencies_on_multiple_parameters() -> None:
+    first_dependency = Tracker()
+    second_dependency = Tracker()
 
     async def my_func(
-        x: Annotated[int, dep_a],
-        y: Annotated[str, dep_b],
+        x: Annotated[int, first_dependency],
+        y: Annotated[str, second_dependency],
     ) -> None: ...
 
     result = get_annotation_dependencies(my_func)
-    assert result["x"] == [dep_a]
-    assert result["y"] == [dep_b]
+    assert result["x"] == [first_dependency]
+    assert result["y"] == [second_dependency]
 
 
 def test_skips_return_annotation() -> None:
-    dep = _Tracker()
+    dependency = Tracker()
 
-    async def my_func(x: Annotated[int, dep]) -> Annotated[str, _Tracker()]: ...
+    async def my_func(
+        x: Annotated[int, dependency],
+    ) -> Annotated[str, Tracker()]: ...
 
     result = get_annotation_dependencies(my_func)
     assert "return" not in result
@@ -112,9 +114,9 @@ def test_skips_return_annotation() -> None:
 
 
 def test_caches_results() -> None:
-    dep = _Tracker()
+    dependency = Tracker()
 
-    async def my_func(x: Annotated[int, dep]) -> None: ...
+    async def my_func(x: Annotated[int, dependency]) -> None: ...
 
     first = get_annotation_dependencies(my_func)
     second = get_annotation_dependencies(my_func)
@@ -131,50 +133,50 @@ def test_handles_unresolvable_hints() -> None:
 
 
 def test_default_bind_returns_self() -> None:
-    class _Plain(Dependency[str]):
+    class PlainDependency(Dependency[str]):
         async def __aenter__(self) -> str: ...
 
-    dep = _Plain()
-    bound = dep.bind_to_parameter("x", 42)
-    assert bound is dep
+    dependency = PlainDependency()
+    bound = dependency.bind_to_parameter("x", 42)
+    assert bound is dependency
 
 
 def test_subclass_bind_creates_copy() -> None:
-    dep = _Tracker()
-    bound = dep.bind_to_parameter("customer_id", 99)
+    dependency = Tracker()
+    bound = dependency.bind_to_parameter("customer_id", 99)
 
-    assert bound is not dep
+    assert bound is not dependency
     assert bound.bound_name == "customer_id"
     assert bound.bound_value == 99
-    assert dep.bound_name is None
+    assert dependency.bound_name is None
 
 
-async def test_annotation_deps_entered_and_exited() -> None:
-    dep = _Tracker()
+async def test_annotation_dependency_entered_and_exited() -> None:
+    dependency = Tracker()
 
-    async def my_func(x: Annotated[int, dep]) -> None: ...
+    async def my_func(x: Annotated[int, dependency]) -> None: ...
 
     async with resolved_dependencies(my_func, {"x": 42}):
         pass
 
     # bind_to_parameter returns a copy, so the original is untouched
-    assert not dep.entered
+    assert not dependency.entered
 
 
-async def test_annotation_dep_receives_parameter_value() -> None:
-    bound_copies: list[_Tracker] = []
+async def test_annotation_dependency_receives_parameter_value() -> None:
+    bound_copies: list[Tracker] = []
 
-    class _CaptureBind(_Tracker):
-        def bind_to_parameter(self, name: str, value: Any) -> "_CaptureBind":
-            copy = _CaptureBind()
+    class CapturingDependency(Tracker):
+        def bind_to_parameter(self, name: str, value: Any) -> "CapturingDependency":
+            copy = CapturingDependency()
             copy.bound_name = name
             copy.bound_value = value
             bound_copies.append(copy)
             return copy
 
-    dep = _CaptureBind()
+    dependency = CapturingDependency()
 
-    async def my_func(x: Annotated[int, dep]) -> None: ...
+    async def my_func(x: Annotated[int, dependency]) -> None: ...
 
     async with resolved_dependencies(my_func, {"x": 42}):
         assert len(bound_copies) == 1
@@ -183,109 +185,107 @@ async def test_annotation_dep_receives_parameter_value() -> None:
         assert bound_copies[0].entered
 
 
-async def test_annotation_dep_value_not_in_arguments() -> None:
-    """Annotation deps wrap execution but don't inject values."""
-    dep = _Tracker()
+async def test_annotation_dependency_value_not_in_arguments() -> None:
+    """Annotation dependencies wrap execution but don't inject values."""
+    dependency = Tracker()
 
-    async def my_func(x: Annotated[int, dep]) -> None: ...
+    async def my_func(x: Annotated[int, dependency]) -> None: ...
 
-    async with resolved_dependencies(my_func, {"x": 42}) as args:
-        # Regular parameter x is not in the resolved dependency args —
-        # annotation deps wrap execution but don't add to the dict
-        assert "x" not in args
+    async with resolved_dependencies(my_func, {"x": 42}) as arguments:
+        assert "x" not in arguments
 
 
-async def test_annotation_deps_resolve_after_defaults() -> None:
-    """Annotation deps can see values resolved by default deps."""
+async def test_annotation_dependencies_resolve_after_defaults() -> None:
+    """Annotation dependencies can see values resolved by default dependencies."""
     bound_values: list[Any] = []
 
-    class _ValueCapture(Dependency["_ValueCapture"]):
-        def bind_to_parameter(self, name: str, value: Any) -> "_ValueCapture":
+    class ValueCapture(Dependency["ValueCapture"]):
+        def bind_to_parameter(self, name: str, value: Any) -> "ValueCapture":
             bound_values.append(value)
             return self
 
-        async def __aenter__(self) -> "_ValueCapture":
+        async def __aenter__(self) -> "ValueCapture":
             return self
 
-    class _Injector(Dependency[str]):
+    class Injector(Dependency[str]):
         async def __aenter__(self) -> str:
             return "injected"
 
-    def Injector() -> str:
-        return cast(str, _Injector())
+    def make_injector() -> str:
+        return cast(str, Injector())
 
-    capture = _ValueCapture()
+    capture = ValueCapture()
 
     async def my_func(
-        x: Annotated[str, capture] = Injector(),
+        x: Annotated[str, capture] = make_injector(),
     ) -> None: ...
 
-    async with resolved_dependencies(my_func) as args:
-        assert args["x"] == "injected"
+    async with resolved_dependencies(my_func) as arguments:
+        assert arguments["x"] == "injected"
         assert bound_values == ["injected"]
 
 
-async def test_annotation_dep_error_propagates() -> None:
-    """Annotation dep errors propagate directly, not as FailedDependency."""
+async def test_annotation_dependency_error_propagates() -> None:
+    """Annotation dependency errors propagate directly, not as FailedDependency."""
 
-    class _Boom(Dependency["_Boom"]):
-        async def __aenter__(self) -> "_Boom":
+    class ExplodingDependency(Dependency["ExplodingDependency"]):
+        async def __aenter__(self) -> "ExplodingDependency":
             raise RuntimeError("annotation boom")
 
-    dep = _Boom()
+    dependency = ExplodingDependency()
 
-    async def my_func(x: Annotated[int, dep]) -> None: ...
+    async def my_func(x: Annotated[int, dependency]) -> None: ...
 
     with pytest.raises(RuntimeError, match="annotation boom"):
         async with resolved_dependencies(my_func, {"x": 1}):
             ...
 
 
-def test_single_annotation_dep_per_param_is_valid() -> None:
-    dep = _Tracker()
+def test_single_annotation_dependency_per_parameter_is_valid() -> None:
+    dependency = Tracker()
 
-    async def my_func(x: Annotated[int, dep]) -> None: ...
+    async def my_func(x: Annotated[int, dependency]) -> None: ...
 
-    validate_dependencies(my_func)
+    assert validate_dependencies(my_func) is None
 
 
-def test_duplicate_single_annotation_dep_on_same_param_raises() -> None:
+def test_duplicate_single_annotation_dependency_on_same_parameter_raises() -> None:
     async def my_func(
-        x: Annotated[int, _Tracker(), _Tracker()],
+        x: Annotated[int, Tracker(), Tracker()],
     ) -> None: ...
 
     with pytest.raises(
         ValueError,
-        match="Only one _Tracker annotation dependency is allowed per parameter",
+        match="Only one Tracker annotation dependency is allowed per parameter",
     ):
         validate_dependencies(my_func)
 
 
-def test_single_annotation_dep_on_different_params_is_valid() -> None:
+def test_single_annotation_dependency_on_different_parameters_is_valid() -> None:
     async def my_func(
-        x: Annotated[int, _Tracker()],
-        y: Annotated[str, _Tracker()],
+        x: Annotated[int, Tracker()],
+        y: Annotated[str, Tracker()],
     ) -> None: ...
 
-    validate_dependencies(my_func)
+    assert validate_dependencies(my_func) is None
 
 
 async def test_without_dependencies_wraps_annotation_only_functions() -> None:
     entered = False
 
-    class _SideEffect(Dependency["_SideEffect"]):
-        async def __aenter__(self) -> "_SideEffect":
+    class SideEffectDependency(Dependency["SideEffectDependency"]):
+        async def __aenter__(self) -> "SideEffectDependency":
             nonlocal entered
             entered = True
             return self
 
-    dep = _SideEffect()
+    dependency = SideEffectDependency()
 
-    async def my_func(x: Annotated[int, dep]) -> int:
+    async def my_func(x: Annotated[int, dependency]) -> int:
         return x * 2
 
     wrapped = without_dependencies(my_func)
-    assert wrapped is not my_func  # should be wrapped
+    assert wrapped is not my_func
 
     result = await wrapped(x=5)
     assert result == 10
