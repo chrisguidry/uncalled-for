@@ -316,18 +316,18 @@ def validate_dependencies(function: Callable[..., Any]) -> None:
                 f"but found: {types}"
             )
 
-    # Phase 3: check annotation deps per-parameter.
-    annotation_deps = get_annotation_dependencies(function)
-    for param_name, deps in annotation_deps.items():
+    # Phase 3: check annotation dependencies per-parameter.
+    annotation_dependencies = get_annotation_dependencies(function)
+    for parameter_name, parameter_deps in annotation_dependencies.items():
         ann_counts: Counter[type[Dependency[Any]]] = Counter(
             type(d)
-            for d in deps  # pyright: ignore[reportUnknownArgumentType]
+            for d in parameter_deps  # pyright: ignore[reportUnknownArgumentType]
         )
         for dep_type, count in ann_counts.items():
             if getattr(dep_type, "single", False) and count > 1:  # pyright: ignore[reportUnknownArgumentType]
                 raise ValueError(
                     f"Only one {dep_type.__name__} annotation dependency "  # pyright: ignore[reportUnknownArgumentType,reportUnknownMemberType]
-                    f"is allowed per parameter, but found {count} on '{param_name}'"
+                    f"is allowed per parameter, but found {count} on '{parameter_name}'"
                 )
 
 
@@ -375,11 +375,11 @@ async def resolved_dependencies(
                     except Exception as error:
                         arguments[parameter] = FailedDependency(parameter, error)
 
-                annotation_deps = get_annotation_dependencies(function)
-                for param_name, deps in annotation_deps.items():
-                    value = provided.get(param_name, arguments.get(param_name))
-                    for dep in deps:
-                        bound = dep.bind_to_parameter(param_name, value)
+                annotation_dependencies = get_annotation_dependencies(function)
+                for parameter_name, dependencies in annotation_dependencies.items():
+                    value = provided.get(parameter_name, arguments.get(parameter_name))
+                    for dependency in dependencies:
+                        bound = dependency.bind_to_parameter(parameter_name, value)
                         await stack.enter_async_context(bound)
 
                 yield arguments
@@ -398,8 +398,8 @@ def without_dependencies(fn: Callable[..., Any]) -> Callable[..., Any]:
     automatically and forwards user-supplied keyword arguments.
     """
     dep_names = set(get_dependency_parameters(fn))
-    annotation_deps = get_annotation_dependencies(fn)
-    if not dep_names and not annotation_deps:
+    annotation_dependencies = get_annotation_dependencies(fn)
+    if not dep_names and not annotation_dependencies:
         return fn
 
     original_sig = get_signature(fn)

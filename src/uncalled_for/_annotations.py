@@ -30,9 +30,9 @@ def get_annotation_dependencies(
             continue
         if get_origin(hint) is not Annotated:
             continue
-        deps = [a for a in get_args(hint)[1:] if isinstance(a, Dependency)]
-        if deps:
-            result[name] = deps  # pyright: ignore[reportUnknownMemberType]
+        dependencies = [a for a in get_args(hint)[1:] if isinstance(a, Dependency)]
+        if dependencies:
+            result[name] = dependencies  # pyright: ignore[reportUnknownMemberType]
 
     _annotation_cache[function] = result
     return result
