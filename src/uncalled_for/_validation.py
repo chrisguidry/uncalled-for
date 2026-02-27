@@ -15,18 +15,32 @@ def validate_dependencies(function: Callable[..., Any]) -> None:
     """Check that a function's dependency declarations are valid.
 
     Raises ``ValueError`` if multiple dependencies with ``single=True``
-    share the same type or base class.
+    share the same type or base class. The check spans both default-parameter
+    dependencies and ``Annotated`` annotation dependencies — ``single`` means
+    at most one instance of that type across the entire function.
 
     Concrete-type duplicates are checked first so the error message names
     the exact type (e.g. "Retry") rather than an abstract ancestor
     (e.g. "FailureHandler").
     """
-    parameters = get_dependency_parameters(function)
-    dependencies = list(parameters.values())
+    default_dependencies: list[Dependency[Any]] = list(
+        get_dependency_parameters(function).values()
+    )
 
+    annotation_dependencies_by_parameter = get_annotation_dependencies(function)
+    annotation_dependencies: list[Dependency[Any]] = [
+        dependency
+        for parameter_dependencies in annotation_dependencies_by_parameter.values()
+        for dependency in parameter_dependencies  # pyright: ignore[reportUnknownVariableType]
+    ]
+
+    all_dependencies = default_dependencies + annotation_dependencies
+
+    # Check for duplicate concrete types.  This catches e.g. two Retry(...)
+    # and reports "Only one Retry dependency is allowed".
     counts: Counter[type[Dependency[Any]]] = Counter(
         type(dependency)
-        for dependency in dependencies  # pyright: ignore[reportUnknownArgumentType]
+        for dependency in all_dependencies  # pyright: ignore[reportUnknownArgumentType]
     )
     for dependency_type, count in counts.items():
         if getattr(dependency_type, "single", False) and count > 1:  # pyright: ignore[reportUnknownArgumentType]
@@ -34,8 +48,10 @@ def validate_dependencies(function: Callable[..., Any]) -> None:
                 f"Only one {dependency_type.__name__} dependency is allowed"  # pyright: ignore[reportUnknownArgumentType,reportUnknownMemberType]
             )
 
+    # Check for conflicts between *different* subclasses that share a single
+    # base (e.g. Timeout + CustomRuntime both under Runtime).
     single_bases: set[type[Dependency[Any]]] = set()
-    for dependency in dependencies:
+    for dependency in all_dependencies:
         for cls in type(dependency).__mro__:
             if (
                 issubclass(cls, Dependency)
@@ -47,7 +63,7 @@ def validate_dependencies(function: Callable[..., Any]) -> None:
     for base_class in single_bases:
         instances = [
             dependency
-            for dependency in dependencies
+            for dependency in all_dependencies
             if isinstance(dependency, base_class)
         ]
         if len(instances) > 1:
@@ -56,16 +72,3 @@ def validate_dependencies(function: Callable[..., Any]) -> None:
                 f"Only one {base_class.__name__} dependency is allowed, "
                 f"but found: {types}"
             )
-
-    annotation_dependencies = get_annotation_dependencies(function)
-    for parameter_name, parameter_dependencies in annotation_dependencies.items():
-        annotation_counts: Counter[type[Dependency[Any]]] = Counter(
-            type(dependency)
-            for dependency in parameter_dependencies  # pyright: ignore[reportUnknownArgumentType]
-        )
-        for dependency_type, count in annotation_counts.items():
-            if getattr(dependency_type, "single", False) and count > 1:  # pyright: ignore[reportUnknownArgumentType]
-                raise ValueError(
-                    f"Only one {dependency_type.__name__} annotation dependency "  # pyright: ignore[reportUnknownArgumentType,reportUnknownMemberType]
-                    f"is allowed per parameter, but found {count} on '{parameter_name}'"
-                )

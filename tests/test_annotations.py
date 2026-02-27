@@ -256,18 +256,35 @@ def test_duplicate_single_annotation_dependency_on_same_parameter_raises() -> No
 
     with pytest.raises(
         ValueError,
-        match="Only one Tracker annotation dependency is allowed per parameter",
+        match="Only one Tracker dependency is allowed",
     ):
         validate_dependencies(my_func)
 
 
-def test_single_annotation_dependency_on_different_parameters_is_valid() -> None:
+def test_single_annotation_dependency_on_different_parameters_raises() -> None:
     async def my_func(
         x: Annotated[int, Tracker()],
         y: Annotated[str, Tracker()],
     ) -> None: ...
 
-    validate_dependencies(my_func)
+    with pytest.raises(
+        ValueError,
+        match="Only one Tracker dependency is allowed",
+    ):
+        validate_dependencies(my_func)
+
+
+def test_single_as_both_annotation_and_bare_default_raises() -> None:
+    async def my_func(
+        x: Annotated[int, Tracker()],
+        tracker: Tracker = Tracker(),
+    ) -> None: ...
+
+    with pytest.raises(
+        ValueError,
+        match="Only one Tracker dependency is allowed",
+    ):
+        validate_dependencies(my_func)
 
 
 async def test_without_dependencies_wraps_annotation_only_functions() -> None:
