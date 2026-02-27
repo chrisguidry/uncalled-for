@@ -246,7 +246,7 @@ def test_single_annotation_dependency_per_parameter_is_valid() -> None:
 
     async def my_func(x: Annotated[int, dependency]) -> None: ...
 
-    assert validate_dependencies(my_func) is None
+    validate_dependencies(my_func)
 
 
 def test_duplicate_single_annotation_dependency_on_same_parameter_raises() -> None:
@@ -267,7 +267,7 @@ def test_single_annotation_dependency_on_different_parameters_is_valid() -> None
         y: Annotated[str, Tracker()],
     ) -> None: ...
 
-    assert validate_dependencies(my_func) is None
+    validate_dependencies(my_func)
 
 
 async def test_without_dependencies_wraps_annotation_only_functions() -> None:
