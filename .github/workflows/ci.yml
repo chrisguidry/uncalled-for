@@ -51,6 +51,22 @@ jobs:
           --cov-fail-under=${{ matrix.cov-threshold }}
           --cov-report=xml
           --cov-report=term-missing:skip-covered
+          --junitxml=junit.xml
+          -o junit_family=legacy
+
+      - name: Upload coverage to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: python${{ matrix.python-version }}
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: python${{ matrix.python-version }}
 
   prek:
     name: Prek checks
