@@ -21,9 +21,7 @@ class _ContextSensitiveAttr:
 
     def __init__(self, name: str) -> None:
         self.name = name
-        self._store: ContextVar[dict[int, Any]] = ContextVar(
-            f"uncalled_for_{name}"
-        )
+        self._store: ContextVar[dict[int, Any]] = ContextVar(f"uncalled_for_{name}")
 
     def __get__(self, instance: Any, owner: type | None = None) -> Any:
         if instance is None:
@@ -32,8 +30,7 @@ class _ContextSensitiveAttr:
             return self._store.get()[id(instance)]
         except (LookupError, KeyError):
             raise AttributeError(
-                f"'{type(instance).__name__}' object has no attribute"
-                f" '{self.name}'"
+                f"'{type(instance).__name__}' object has no attribute '{self.name}'"
             ) from None
 
     def __set__(self, instance: Any, value: Any) -> None:
