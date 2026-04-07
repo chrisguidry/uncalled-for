@@ -8,7 +8,6 @@ from .annotations import get_annotation_dependencies
 from .base import Dependency
 from .functional import DependencyFactory, Depends
 from .introspection import (
-    get_class_dependencies,
     get_dependency_parameters,
     get_signature,
 )
@@ -24,7 +23,6 @@ __all__ = [
     "Shared",
     "SharedContext",
     "get_annotation_dependencies",
-    "get_class_dependencies",
     "get_dependency_parameters",
     "get_signature",
     "resolved_dependencies",

@@ -26,17 +26,6 @@ def get_signature(function: Callable[..., Any]) -> inspect.Signature:
     return signature
 
 
-def get_class_dependencies(
-    dependency_class: type[Dependency[Any]],
-) -> dict[str, Dependency[Any]]:
-    """Find class-level ``Dependency`` attributes on a Dependency subclass.
-
-    Returns a dict mapping attribute names to the ``Dependency`` instances
-    that were declared on *dependency_class* or any of its ancestors.
-    """
-    return dict(getattr(dependency_class, "__class_dependencies__", {}))
-
-
 _parameter_cache: dict[Callable[..., Any], dict[str, Dependency[Any]]] = {}
 
 
