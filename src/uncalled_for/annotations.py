@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, get_args, get_origin, get_type_hints
+from typing import Annotated, Any, cast, get_args, get_origin, get_type_hints
 
 from collections.abc import Callable
 
@@ -38,9 +38,9 @@ def get_annotation_dependencies(
         dependencies: list[Dependency[Any]] = []
         for a in get_args(hint)[1:]:
             if isinstance(a, Dependency):
-                dependencies.append(a)
+                dependencies.append(cast(Dependency[Any], a))
             elif isinstance(a, type) and issubclass(a, Dependency):
-                dependencies.append(a())
+                dependencies.append(cast(Dependency[Any], a()))
         if dependencies:
             result[name] = dependencies
 

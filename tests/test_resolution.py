@@ -1,9 +1,14 @@
 """Tests for resolved_dependencies and FailedDependency."""
 
 from __future__ import annotations
-from typing import cast
+from typing import Any, cast
 
-from uncalled_for import Dependency, FailedDependency, resolved_dependencies
+from uncalled_for import (
+    Dependency,
+    FailedDependency,
+    current_frame,
+    resolved_dependencies,
+)
 
 
 class _Boom(Dependency[str]):
@@ -50,3 +55,22 @@ async def test_mixed_deps_and_kwargs() -> None:
     async with resolved_dependencies(my_func, {"a": "provided"}) as deps:
         assert deps["a"] == "provided"
         assert deps["b"] == "injected"
+
+
+async def test_dependency_sees_the_current_frame() -> None:
+    seen: dict[str, Any] = {}
+
+    class _Peek(Dependency[str]):
+        async def __aenter__(self) -> str:
+            frame = current_frame()
+            seen["function"] = frame.function
+            seen["provided"] = frame.provided
+            return "peeked"
+
+    async def my_func(a: str = cast(str, _Peek()), b: str = Simple()) -> None: ...
+
+    async with resolved_dependencies(my_func, {"b": "given"}) as deps:
+        assert deps["a"] == "peeked"
+
+    assert seen["function"] is my_func
+    assert seen["provided"] == {"b": "given"}

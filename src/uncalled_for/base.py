@@ -31,6 +31,18 @@ class Dependency(abc.ABC, Generic[T]):
         """
         return self
 
+    def for_parameter(self, name: str) -> Dependency[T]:
+        """Return the dependency to use for the parameter called *name*.
+
+        Called with the name of the parameter this dependency is about to
+        resolve for. The default returns *self*. Subclasses override to
+        return a copy bound to the name.
+
+        This is not ``bind_to_parameter``, which applies to ``Annotated``
+        metadata and also receives the parameter's value.
+        """
+        return self
+
     @abc.abstractmethod
     async def __aenter__(self) -> T: ...
 

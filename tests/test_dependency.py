@@ -39,6 +39,11 @@ async def test_aexit_runs_without_error() -> None:
         assert value == "goodbye"
 
 
+def test_for_parameter_returns_self() -> None:
+    greeter = Greeter()
+    assert greeter.for_parameter("name") is greeter
+
+
 def test_single_flag() -> None:
     class SingletonDep(Dependency[str]):
         single = True

@@ -13,7 +13,10 @@ from contextvars import ContextVar
 from types import TracebackType
 from typing import Any, ClassVar, TypeVar, cast, overload
 
-from .functional import DependencyFactory, _FunctionalDependency
+from .functional import (
+    DependencyFactory,
+    _FunctionalDependency,  # pyright: ignore[reportPrivateUsage]
+)
 from .introspection import get_dependency_parameters
 
 R = TypeVar("R")

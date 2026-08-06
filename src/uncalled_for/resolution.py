@@ -9,7 +9,8 @@ from functools import lru_cache
 from typing import Any
 
 from .annotations import get_annotation_dependencies
-from .functional import _Depends
+from .frames import frame_scope
+from .functional import _Depends  # pyright: ignore[reportPrivateUsage]
 from .introspection import get_dependency_parameters, get_signature
 
 
@@ -42,29 +43,25 @@ async def resolved_dependencies(
         async with AsyncExitStack() as stack:
             stack_token = _Depends.stack.set(stack)
             try:
-                arguments: dict[str, Any] = {}
-                parameters = get_dependency_parameters(function)
+                with frame_scope(function, provided) as frame:
+                    arguments: dict[str, Any] = {}
 
-                for parameter, dependency in parameters.items():
-                    if parameter in provided:
-                        arguments[parameter] = provided[parameter]
-                        continue
+                    for parameter in get_dependency_parameters(function):
+                        try:
+                            arguments[parameter] = await frame.resolve(parameter)
+                        except Exception as error:
+                            arguments[parameter] = FailedDependency(parameter, error)
 
-                    try:
-                        arguments[parameter] = await stack.enter_async_context(
-                            dependency
+                    annotation_dependencies = get_annotation_dependencies(function)
+                    for parameter_name, dependencies in annotation_dependencies.items():
+                        value = provided.get(
+                            parameter_name, arguments.get(parameter_name)
                         )
-                    except Exception as error:
-                        arguments[parameter] = FailedDependency(parameter, error)
+                        for dependency in dependencies:
+                            bound = dependency.bind_to_parameter(parameter_name, value)
+                            await stack.enter_async_context(bound)
 
-                annotation_dependencies = get_annotation_dependencies(function)
-                for parameter_name, dependencies in annotation_dependencies.items():
-                    value = provided.get(parameter_name, arguments.get(parameter_name))
-                    for dependency in dependencies:
-                        bound = dependency.bind_to_parameter(parameter_name, value)
-                        await stack.enter_async_context(bound)
-
-                yield arguments
+                    yield arguments
             finally:
                 _Depends.stack.reset(stack_token)
     finally:
