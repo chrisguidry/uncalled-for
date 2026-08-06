@@ -137,8 +137,8 @@ async def test_provided_only_never_enters_a_dependency() -> None:
         with frame_scope(target) as frame:
             with pytest.raises(LookupError) as caught:
                 await frame.resolve("value", provided_only=True)
+            assert dependency.enters == 0
 
-    assert dependency.enters == 0
     assert "target" in str(caught.value)
     assert "value" in str(caught.value)
 
@@ -164,9 +164,9 @@ async def test_resolve_memoizes_a_failure() -> None:
                 await frame.resolve("value")
             with pytest.raises(RuntimeError) as second:
                 await frame.resolve("value")
+            assert dependency.enters == 1
 
     assert first.value is second.value
-    assert dependency.enters == 1
 
 
 async def test_resolve_calls_for_parameter_before_entering() -> None:
