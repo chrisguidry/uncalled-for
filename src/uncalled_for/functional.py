@@ -75,7 +75,7 @@ class _Depends(_FunctionalDependency[R]):
         return (
             self.factory,
             tuple(
-                (name, _binding_key(self.bindings[name]))
+                (name, _binding_key(self.bindings[name], name))
                 for name in sorted(self.bindings)
             ),
         )
@@ -124,17 +124,19 @@ class _Depends(_FunctionalDependency[R]):
         return resolved_value
 
 
-def _binding_key(value: Any) -> Hashable:
-    """Produce a hashable cache key for one binding value.
+def _binding_key(value: Any, name: str) -> Hashable:
+    """Produce a hashable cache key for the binding *value* on parameter *name*.
 
     Two bindings share a cached factory result only when their keys are equal.
     The ``"value"`` and ``"id"`` tags keep a tuple a caller passed from
     matching a key this function built.
     """
     if isinstance(value, _CallArgument):
-        # The runtime type is part of the key so that a subclass with different
+        # A bare CallArgument resolves the parameter it is bound to, so its
+        # key uses that name and matches the equivalent explicit form. The
+        # runtime type is part of the key so that a subclass with different
         # semantics never shares an entry with the class it extends.
-        return (type(value), value.parameter, value.optional)
+        return (type(value), value.parameter or name, value.optional)
 
     if isinstance(value, _Depends):
         depends = cast("_Depends[Any]", value)

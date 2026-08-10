@@ -55,7 +55,9 @@ class _Shared(_FunctionalDependency[R]):
         parameters = get_dependency_parameters(self.factory)
 
         for parameter, dependency in parameters.items():
-            arguments[parameter] = await stack.enter_async_context(dependency)
+            arguments[parameter] = await stack.enter_async_context(
+                dependency.for_parameter(parameter)
+            )
 
         return arguments
 

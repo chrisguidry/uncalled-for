@@ -146,6 +146,27 @@ async def test_matching_call_argument_bindings_share_a_cache_entry() -> None:
     assert calls == 1
 
 
+async def test_bare_and_explicit_call_argument_bindings_share_a_cache_entry() -> None:
+    calls = 0
+
+    def make(x: str) -> str:
+        nonlocal calls
+        calls += 1
+        return f"made {x}"
+
+    async def handle(
+        x: str,
+        first: str = Depends(make, x=CallArgument()),
+        second: str = Depends(make, x=CallArgument("x")),
+    ) -> None: ...
+
+    async with resolved_dependencies(handle, {"x": "one"}) as deps:
+        assert deps["first"] == "made one"
+        assert deps["second"] == "made one"
+
+    assert calls == 1
+
+
 async def test_differing_call_argument_bindings_resolve_separately() -> None:
     seen: list[str] = []
 

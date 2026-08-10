@@ -4,8 +4,15 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import cast
 
-from uncalled_for import Depends, Shared, SharedContext, resolved_dependencies
+from uncalled_for import (
+    Dependency,
+    Depends,
+    Shared,
+    SharedContext,
+    resolved_dependencies,
+)
 
 
 async def test_shared_resolves_once_across_calls() -> None:
@@ -117,3 +124,27 @@ async def test_shared_context_cleanup_order() -> None:
             assert deps["v"] == "b"
 
     assert order == ["a-enter", "b-enter", "b-exit", "a-exit"]
+
+
+async def test_shared_resolution_calls_for_parameter() -> None:
+    events: list[str] = []
+
+    class _Recording(Dependency[str]):
+        def for_parameter(self, name: str) -> Dependency[str]:
+            events.append(f"for_parameter:{name}")
+            return self
+
+        async def __aenter__(self) -> str:
+            events.append("aenter")
+            return "recorded"
+
+    def build(source: str = cast(str, _Recording())) -> str:
+        return f"built from {source}"
+
+    async def handle(value: str = Shared(build)) -> None: ...
+
+    async with SharedContext():
+        async with resolved_dependencies(handle) as deps:
+            assert deps["value"] == "built from recorded"
+
+    assert events == ["for_parameter:source", "aenter"]
