@@ -154,7 +154,9 @@ def _binding_key(value: Any, name: str) -> Hashable:
     except TypeError:
         return ("id", id(value))
 
-    return ("value", value)
+    # The runtime type is part of the key because Python compares 1, 1.0, and
+    # True as equal, and a factory can produce different results for each.
+    return ("value", cast(type[Any], type(value)), value)
 
 
 @overload

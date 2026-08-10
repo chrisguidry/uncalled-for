@@ -242,6 +242,27 @@ async def test_differing_plain_bindings_resolve_separately() -> None:
     assert calls == 2
 
 
+async def test_equal_values_of_different_types_resolve_separately() -> None:
+    seen: list[str] = []
+
+    def make(x: object) -> str:
+        seen.append(f"{type(x).__name__}:{x}")
+        return f"made {x}"
+
+    async def handle(
+        first: str = Depends(make, x=1),
+        second: str = Depends(make, x=1.0),
+        third: str = Depends(make, x=True),
+    ) -> None: ...
+
+    async with resolved_dependencies(handle) as deps:
+        assert deps["first"] == "made 1"
+        assert deps["second"] == "made 1.0"
+        assert deps["third"] == "made True"
+
+    assert seen == ["int:1", "float:1.0", "bool:True"]
+
+
 async def test_unhashable_bindings_resolve_separately() -> None:
     seen: list[list[int]] = []
 
