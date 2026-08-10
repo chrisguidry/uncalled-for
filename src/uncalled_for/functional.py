@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Hashable
 from contextlib import (
     AbstractAsyncContextManager,
     AbstractContextManager,
@@ -21,6 +21,11 @@ R = TypeVar("R")
 DependencyFactory = Callable[
     ..., R | Awaitable[R] | AbstractContextManager[R] | AbstractAsyncContextManager[R]
 ]
+
+CacheKey = (
+    DependencyFactory[Any]
+    | tuple[DependencyFactory[Any], tuple[tuple[str, Hashable], ...]]
+)
 
 
 class _FunctionalDependency(Dependency[R]):
@@ -54,8 +59,7 @@ class _FunctionalDependency(Dependency[R]):
 class _Depends(_FunctionalDependency[R]):
     """Call-scoped dependency, resolved fresh for each call."""
 
-    # A key is either the factory alone, or the factory with its sorted bindings.
-    cache: ClassVar[ContextVar[dict[Any, Any]]] = ContextVar("uncalled_for_cache")
+    cache: ClassVar[ContextVar[dict[CacheKey, Any]]] = ContextVar("uncalled_for_cache")
     stack: ClassVar[ContextVar[AsyncExitStack]] = _stack
 
     bindings: dict[str, Any]
@@ -64,7 +68,7 @@ class _Depends(_FunctionalDependency[R]):
         super().__init__(factory)
         self.bindings = bindings
 
-    def _cache_key(self) -> Any:
+    def _cache_key(self) -> CacheKey:
         if not self.bindings:
             return self.factory
 
@@ -120,7 +124,7 @@ class _Depends(_FunctionalDependency[R]):
         return resolved_value
 
 
-def _binding_key(value: Any) -> Any:
+def _binding_key(value: Any) -> Hashable:
     """Produce a hashable cache key for one binding value.
 
     Two bindings share a cached factory result only when their keys are equal.
