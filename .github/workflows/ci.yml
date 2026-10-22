@@ -32,7 +32,7 @@ jobs:
             cov-threshold: 100
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install uv and set Python version
         uses: astral-sh/setup-uv@v7
@@ -56,7 +56,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: python${{ matrix.python-version }}
@@ -73,7 +73,7 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install uv and set Python version
         uses: astral-sh/setup-uv@v7
@@ -86,4 +86,4 @@ jobs:
         run: uv sync
 
       - name: Run prek
-        uses: j178/prek-action@v1
+        uses: j178/prek-action@v2
