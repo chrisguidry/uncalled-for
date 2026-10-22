@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from contextlib import AsyncExitStack, contextmanager
 from contextvars import ContextVar
 from typing import Any, cast
@@ -111,7 +111,7 @@ def current_frame() -> Frame:
 def frame_scope(
     function: Callable[..., Any],
     provided: dict[str, Any] | None = None,
-) -> Iterator[Frame]:
+) -> Generator[Frame]:
     """Make a frame for one call of *function* and set it as the current frame.
 
     *provided* holds the arguments the caller passed, which take precedence

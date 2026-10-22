@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import AsyncExitStack, contextmanager
 from typing import Any, cast
 
@@ -84,7 +84,7 @@ async def test_a_context_manager_binding_wraps_the_factory() -> None:
     events: list[str] = []
 
     @contextmanager
-    def open_handle() -> Iterator[str]:
+    def open_handle() -> Generator[str]:
         events.append("open")
         yield "handle"
         events.append("close")
