@@ -104,11 +104,12 @@ class SharedContext:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        await self._stack.__aexit__(exc_type, exc_value, traceback)
-
-        SharedContext.stack.reset(self._stack_token)
-        SharedContext.lock.reset(self._lock_token)
-        SharedContext.resolved.reset(self._resolved_token)
+        try:
+            await self._stack.__aexit__(exc_type, exc_value, traceback)
+        finally:
+            SharedContext.stack.reset(self._stack_token)
+            SharedContext.lock.reset(self._lock_token)
+            SharedContext.resolved.reset(self._resolved_token)
 
 
 @overload
