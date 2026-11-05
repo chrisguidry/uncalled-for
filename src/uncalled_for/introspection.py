@@ -4,15 +4,14 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Callable
-from typing import Any
 
 from .annotations import get_annotated_metadata
 from .base import Dependency, Provider
 
-_signature_cache: dict[Callable[..., Any], inspect.Signature] = {}
+_signature_cache: dict[Callable[..., object], inspect.Signature] = {}
 
 
-def get_signature(function: Callable[..., Any]) -> inspect.Signature:
+def get_signature(function: Callable[..., object]) -> inspect.Signature:
     """Get a cached signature for a function."""
     if function in _signature_cache:
         return _signature_cache[function]
@@ -27,12 +26,12 @@ def get_signature(function: Callable[..., Any]) -> inspect.Signature:
     return signature
 
 
-_parameter_cache: dict[Callable[..., Any], dict[str, Dependency[Any]]] = {}
+_parameter_cache: dict[Callable[..., object], dict[str, Dependency[object]]] = {}
 
 
 def get_dependency_parameters(
-    function: Callable[..., Any],
-) -> dict[str, Dependency[Any]]:
+    function: Callable[..., object],
+) -> dict[str, Dependency[object]]:
     """Find parameters whose values come from a dependency.
 
     A parameter qualifies when its default is a ``Dependency``, or when its
@@ -42,7 +41,7 @@ def get_dependency_parameters(
     if function in _parameter_cache:
         return _parameter_cache[function]
 
-    dependencies: dict[str, Dependency[Any]] = {}
+    dependencies: dict[str, Dependency[object]] = {}
     signature = get_signature(function)
     metadata = get_annotated_metadata(function)
 

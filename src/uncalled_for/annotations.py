@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Annotated, Any, cast, get_args, get_origin, get_type_hints
+from typing import Annotated, cast, get_args, get_origin, get_type_hints
 
 from .base import Dependency, Provider
 
 _metadata_cache: dict[Callable[..., object], dict[str, list[Dependency[object]]]] = {}
-_annotation_cache: dict[Callable[..., Any], dict[str, list[Dependency[Any]]]] = {}
+_annotation_cache: dict[Callable[..., object], dict[str, list[Dependency[object]]]] = {}
 
 
 def get_annotated_metadata(
@@ -44,8 +44,8 @@ def get_annotated_metadata(
 
 
 def get_annotation_dependencies(
-    function: Callable[..., Any],
-) -> dict[str, list[Dependency[Any]]]:
+    function: Callable[..., object],
+) -> dict[str, list[Dependency[object]]]:
     """Find ``Dependency`` instances in ``Annotated`` type-hint metadata.
 
     Bare ``Dependency`` subclasses are also accepted as a shorthand for a
@@ -59,7 +59,7 @@ def get_annotation_dependencies(
     if function in _annotation_cache:
         return _annotation_cache[function]
 
-    result: dict[str, list[Dependency[Any]]] = {}
+    result: dict[str, list[Dependency[object]]] = {}
     for name, dependencies in get_annotated_metadata(function).items():
         side_effects = [d for d in dependencies if not isinstance(d, Provider)]
         if side_effects:
