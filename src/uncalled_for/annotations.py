@@ -12,7 +12,8 @@ if sys.version_info >= (3, 12):
     from typing import TypeAliasType
 else:  # pragma: no cover
     # Python 3.11 has no ``type`` statement, so no hint is ever an alias.
-    class TypeAliasType: ...
+    class TypeAliasType:
+        __value__: object
 
 
 def _metadata(hint: object) -> tuple[object, ...]:
