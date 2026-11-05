@@ -5,7 +5,7 @@ the function is called through the dependency resolution context manager.
 """
 
 from .annotations import get_annotation_dependencies
-from .base import Dependency, Provider
+from .base import Dependency, Provided, Provider
 from .frames import CallArgument, CycleError, Frame, current_frame, frame_scope
 from .functional import DependencyFactory, Depends
 from .introspection import (
@@ -23,6 +23,7 @@ __all__ = [
     "DependencyFactory",
     "Depends",
     "FailedDependency",
+    "Provided",
     "Provider",
     "Frame",
     "Shared",

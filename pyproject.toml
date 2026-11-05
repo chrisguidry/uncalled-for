@@ -7,18 +7,18 @@ name = "uncalled-for"
 dynamic = ["version"]
 description = "Async dependency injection for Python functions"
 readme = { file = "README.md", content-type = "text/markdown" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Chris Guidry", email = "guid@omg.lol" }]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Typing :: Typed",
@@ -51,7 +51,12 @@ source = "vcs"
 packages = ["src/uncalled_for"]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
+
+[tool.ruff.per-file-target-version]
+# conftest.py skips this module on Python 3.11, which cannot parse its
+# ``type`` statements.
+"tests/test_annotated_type_aliases.py" = "py312"
 
 [tool.pytest.ini_options]
 addopts = [
@@ -73,6 +78,12 @@ exclude_also = ["\\.\\.\\.$"]
 
 [tool.pyright]
 include = ["src", "tests"]
+# conftest.py skips this module on Python 3.11, which cannot parse its
+# ``type`` statements, so pyright checks it as 3.12 whatever the interpreter.
+executionEnvironments = [
+    { root = "tests/test_annotated_type_aliases.py", pythonVersion = "3.12" },
+    { root = "." },
+]
 typeCheckingMode = "strict"
 venvPath = "."
 venv = ".venv"
