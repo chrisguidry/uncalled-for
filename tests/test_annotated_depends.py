@@ -3,7 +3,7 @@
 import inspect
 from collections.abc import AsyncGenerator, Generator
 from contextlib import asynccontextmanager, contextmanager
-from typing import Annotated, Any
+from typing import Annotated
 
 import pytest
 
@@ -157,10 +157,10 @@ async def test_annotated_shared_resolves_once_across_calls() -> None:
 
 
 async def test_side_effect_metadata_sees_annotated_depends_value() -> None:
-    bound: list[tuple[str, Any]] = []
+    bound: list[tuple[str, object]] = []
 
     class Recorder(Dependency["Recorder"]):
-        def bind_to_parameter(self, name: str, value: Any) -> "Recorder":
+        def bind_to_parameter(self, name: str, value: object) -> "Recorder":
             bound.append((name, value))
             return self
 
@@ -457,10 +457,10 @@ async def test_custom_provider_supplies_value_as_metadata() -> None:
 
 
 async def test_custom_dependency_wraps_the_call_as_metadata() -> None:
-    entered: list[Any] = []
+    entered: list[object] = []
 
     class Wrapper(Dependency["Wrapper"]):
-        def bind_to_parameter(self, name: str, value: Any) -> "Wrapper":
+        def bind_to_parameter(self, name: str, value: object) -> "Wrapper":
             entered.append(value)
             return self
 

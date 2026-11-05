@@ -47,7 +47,7 @@ def get_dependency_parameters(
     metadata = get_annotated_metadata(function)
 
     for name, parameter in signature.parameters.items():
-        providers: list[Dependency[Any]] = [
+        providers: list[Dependency[object]] = [
             dependency
             for dependency in metadata.get(name, [])
             if isinstance(dependency, Provider)
