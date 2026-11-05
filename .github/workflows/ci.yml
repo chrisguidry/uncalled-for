@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
         include:
           # Python 3.11 coverage reporting is unstable
           - python-version: "3.11"
@@ -27,6 +27,8 @@ jobs:
           - python-version: "3.13"
             cov-threshold: 100
           - python-version: "3.14"
+            cov-threshold: 100
+          - python-version: "3.15"
             cov-threshold: 100
 
     steps:
