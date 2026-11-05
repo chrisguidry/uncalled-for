@@ -32,6 +32,7 @@ class _FunctionalDependency(Dependency[R]):
     """Base for dependencies that wrap a factory function."""
 
     factory: DependencyFactory[R]
+    _annotated_provides_value = True
 
     def __init__(self, factory: DependencyFactory[R]) -> None:
         self.factory = factory

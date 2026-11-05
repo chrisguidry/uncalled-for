@@ -23,6 +23,12 @@ class Dependency(abc.ABC, Generic[T]):
 
     single: bool = False
 
+    # True for dependencies that supply a parameter's value when they appear
+    # as ``Annotated`` metadata, as ``Depends``, ``Shared`` and
+    # ``CallArgument`` do. Other metadata dependencies wrap the call and
+    # receive the value instead.
+    _annotated_provides_value: bool = False
+
     def bind_to_parameter(self, name: str, value: Any) -> Dependency[T]:
         """Return a copy bound to a parameter's name and value.
 

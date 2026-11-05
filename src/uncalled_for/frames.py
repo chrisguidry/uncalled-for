@@ -130,6 +130,7 @@ class _CallArgument(Dependency[Any]):
 
     parameter: str | None
     optional: bool
+    _annotated_provides_value = True
 
     def __init__(self, parameter: str | None = None, optional: bool = False) -> None:
         self.parameter = parameter

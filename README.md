@@ -28,6 +28,48 @@ async def handle_request(db: Connection = Depends(get_db)):
 - **Caching** — each dependency resolves once per call, even if referenced multiple times
 - **Call arguments** — a factory can reference the arguments of the call it serves
 
+## Annotated dependencies
+
+`Depends`, `Shared` and `CallArgument` also work as `Annotated` metadata, which
+lets you name a dependency once and reuse it:
+
+```python
+from typing import Annotated
+
+DB = Annotated[Connection, Depends(get_db)]
+
+async def handle_request(db: DB):
+    await db.execute("SELECT 1")
+```
+
+When the function runs through `resolved_dependencies` or
+`without_dependencies`, this resolves exactly like
+`db: Connection = Depends(get_db)`: the parameter is reported by
+`get_dependency_parameters` and hidden by `without_dependencies`. To Python,
+though, `db` is still a required parameter, so calling `handle_request()`
+directly is an error. The default form keeps that call legal, which matters to
+type checkers and to callers that skip dependency resolution. A parameter may
+declare its value with a default or with metadata, not both.
+
+Other `Dependency` subclasses in `Annotated` metadata don't supply a value:
+they wrap the call and receive the parameter's value through
+`bind_to_parameter`.
+
+### Side effects
+
+Before 0.5.0, `Annotated[T, Depends(factory)]` ran the factory around the call
+and threw its value away. To keep that behavior, put the work in a
+`Dependency` subclass, which runs around the call without supplying a value:
+
+```python
+class Audit(Dependency[None]):
+    async def __aenter__(self) -> None:
+        await audit_log()
+
+async def task(customer_id: Annotated[int, Audit()]):
+    ...
+```
+
 ## Call arguments
 
 A factory sometimes needs a value from the call itself, not from another

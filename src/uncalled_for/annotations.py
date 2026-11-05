@@ -2,32 +2,27 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, cast, get_args, get_origin, get_type_hints
-
 from collections.abc import Callable
+from typing import Annotated, Any, cast, get_args, get_origin, get_type_hints
 
 from .base import Dependency
 
+_metadata_cache: dict[Callable[..., Any], dict[str, list[Dependency[Any]]]] = {}
 _annotation_cache: dict[Callable[..., Any], dict[str, list[Dependency[Any]]]] = {}
 
 
-def get_annotation_dependencies(
+def get_annotated_metadata(
     function: Callable[..., Any],
 ) -> dict[str, list[Dependency[Any]]]:
-    """Find ``Dependency`` instances in ``Annotated`` type-hint metadata.
-
-    Bare ``Dependency`` subclasses are also accepted as a shorthand for a
-    parameterless instance: ``Annotated[T, Dep]`` is equivalent to
-    ``Annotated[T, Dep()]``.
-    """
-    if function in _annotation_cache:
-        return _annotation_cache[function]
+    """Find every ``Dependency`` in the ``Annotated`` metadata of a function."""
+    if function in _metadata_cache:
+        return _metadata_cache[function]
 
     result: dict[str, list[Dependency[Any]]] = {}
     try:
         hints = get_type_hints(function, include_extras=True)
     except Exception:
-        _annotation_cache[function] = result
+        _metadata_cache[function] = result
         return result
 
     for name, hint in hints.items():
@@ -43,6 +38,33 @@ def get_annotation_dependencies(
                 dependencies.append(cast(Dependency[Any], a()))
         if dependencies:
             result[name] = dependencies
+
+    _metadata_cache[function] = result
+    return result
+
+
+def get_annotation_dependencies(
+    function: Callable[..., Any],
+) -> dict[str, list[Dependency[Any]]]:
+    """Find ``Dependency`` instances in ``Annotated`` type-hint metadata.
+
+    Bare ``Dependency`` subclasses are also accepted as a shorthand for a
+    parameterless instance: ``Annotated[T, Dep]`` is equivalent to
+    ``Annotated[T, Dep()]``.
+
+    These dependencies wrap the call but do not supply the parameter's value.
+    ``Depends(...)``, ``Shared(...)`` and ``CallArgument(...)`` metadata do
+    supply the value, so they are reported by ``get_dependency_parameters``
+    instead.
+    """
+    if function in _annotation_cache:
+        return _annotation_cache[function]
+
+    result: dict[str, list[Dependency[Any]]] = {}
+    for name, dependencies in get_annotated_metadata(function).items():
+        side_effects = [d for d in dependencies if not d._annotated_provides_value]  # pyright: ignore[reportPrivateUsage]
+        if side_effects:
+            result[name] = side_effects
 
     _annotation_cache[function] = result
     return result
