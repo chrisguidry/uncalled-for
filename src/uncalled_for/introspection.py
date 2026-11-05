@@ -6,7 +6,7 @@ import inspect
 from collections.abc import Callable
 
 from .annotations import _metadata_dependencies  # pyright: ignore[reportPrivateUsage]
-from .base import Dependency, Provider
+from .base import Dependency, Provided, Provider
 
 _signature_cache: dict[Callable[..., object], inspect.Signature] = {}
 
@@ -51,6 +51,12 @@ def get_dependency_parameters(
             for dependency in metadata.get(name, [])
             if isinstance(dependency, Provider)
         ]
+        if parameter.default is Provided and not providers:
+            raise TypeError(
+                f"Parameter {name!r} of {function.__qualname__} defaults to "
+                "Provided, but its annotation has no Provider, such as "
+                "Depends(...), to supply the value"
+            )
         if isinstance(parameter.default, Dependency):
             providers.append(parameter.default)  # pyright: ignore[reportUnknownMemberType,reportUnknownArgumentType]
         if len(providers) > 1:

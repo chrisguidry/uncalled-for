@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import abc
 from types import TracebackType
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Never, TypeVar, cast
 
 T = TypeVar("T", covariant=True)
 
@@ -68,3 +68,30 @@ class Provider(Dependency[T]):
     ``Provider`` instead of ``Dependency`` for a custom dependency that
     should supply the value when used as metadata.
     """
+
+
+class _Provided:
+    """The type of ``Provided``, which has exactly one instance."""
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        return "Provided"
+
+    def __reduce__(self) -> str:
+        # Copies and unpickled values must still be ``Provided``, because the
+        # resolution engine checks for it by identity.
+        return "Provided"
+
+
+Provided: Never = cast(Never, _Provided())
+"""The default for a parameter whose ``Annotated`` metadata supplies its value.
+
+``db: Annotated[Connection, Depends(get_db)]`` is a required parameter, so a
+caller that type-checks against the function's signature, such as a task
+queue that schedules the function with the caller's own arguments, has to pass
+it. ``db: Annotated[Connection, Depends(get_db)] = Provided`` makes it
+optional for those callers. It is typed ``Never`` so that it fits any
+parameter's type. A parameter that defaults to ``Provided`` must have a
+``Provider`` in its metadata.
+"""

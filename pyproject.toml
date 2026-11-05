@@ -52,6 +52,11 @@ packages = ["src/uncalled_for"]
 [tool.ruff]
 target-version = "py311"
 
+[tool.ruff.per-file-target-version]
+# conftest.py skips this module on Python 3.11, which cannot parse its
+# ``type`` statements.
+"tests/test_annotated_type_aliases.py" = "py312"
+
 [tool.pytest.ini_options]
 addopts = [
     "--cov=src/uncalled_for",

@@ -44,6 +44,16 @@ This resolves like `db: Connection = Depends(get_db)`, but to Python `db` is
 still a required parameter. A custom dependency supplies a value from metadata
 only if it subclasses `Provider`; other dependencies there wrap the call.
 
+When something else calls the function with type-checked arguments, such as a
+task queue that schedules it, default the parameter to `Provided` so those
+callers can leave it out:
+
+```python
+async def handle_request(db: DB = Provided): ...
+```
+
+A `type` alias works the same way: `type DB = Annotated[Connection, Depends(get_db)]`.
+
 ## Call arguments
 
 A factory sometimes needs a value from the call itself, not from another

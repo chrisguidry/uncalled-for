@@ -2,10 +2,38 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
 from typing import Annotated, cast, get_args, get_origin, get_type_hints
 
 from .base import Dependency, Provider
+
+if sys.version_info >= (3, 12):
+    from typing import TypeAliasType
+else:  # pragma: no cover
+    # Python 3.11 has no ``type`` statement, so no hint is ever an alias.
+    class TypeAliasType: ...
+
+
+def _metadata(hint: object) -> tuple[object, ...]:
+    """Collect the ``Annotated`` metadata of a hint, through ``type`` aliases.
+
+    ``type DB = Annotated[Connection, Depends(get_db)]`` hides its metadata
+    behind the alias, and ``Annotated[DB, Traced()]`` does not merge the two
+    the way nested ``Annotated`` forms do, so both have to be unwrapped here.
+    The alias's metadata comes first, like the inner form of a nested
+    ``Annotated``.
+    """
+    if isinstance(hint, TypeAliasType):
+        return _metadata(hint.__value__)
+    origin = get_origin(hint)
+    if isinstance(origin, TypeAliasType):
+        return _metadata(origin.__value__)
+    if origin is Annotated:
+        base, *metadata = get_args(hint)
+        return (*_metadata(base), *metadata)
+    return ()
+
 
 _metadata_cache: dict[Callable[..., object], dict[str, list[Dependency[object]]]] = {}
 _annotation_cache: dict[Callable[..., object], dict[str, list[Dependency[object]]]] = {}
@@ -28,10 +56,8 @@ def _metadata_dependencies(
     for name, hint in hints.items():
         if name == "return":
             continue
-        if get_origin(hint) is not Annotated:
-            continue
         dependencies: list[Dependency[object]] = []
-        for a in get_args(hint)[1:]:
+        for a in _metadata(hint):
             if isinstance(a, Dependency):
                 dependencies.append(cast(Dependency[object], a))
             elif isinstance(a, type) and issubclass(a, Dependency):
