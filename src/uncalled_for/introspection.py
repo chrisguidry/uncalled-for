@@ -7,7 +7,7 @@ from collections.abc import Callable
 from typing import Any
 
 from .annotations import get_annotated_metadata
-from .base import Dependency
+from .base import Dependency, Provider
 
 _signature_cache: dict[Callable[..., Any], inspect.Signature] = {}
 
@@ -36,8 +36,7 @@ def get_dependency_parameters(
     """Find parameters whose values come from a dependency.
 
     A parameter qualifies when its default is a ``Dependency``, or when its
-    ``Annotated`` metadata holds a ``Depends(...)``, ``Shared(...)`` or
-    ``CallArgument(...)``. The two
+    ``Annotated`` metadata holds a ``Provider``, such as ``Depends(...)``. The two
     forms are equivalent, and a parameter may use only one of them.
     """
     if function in _parameter_cache:
@@ -51,7 +50,7 @@ def get_dependency_parameters(
         providers: list[Dependency[Any]] = [
             dependency
             for dependency in metadata.get(name, [])
-            if dependency._annotated_provides_value  # pyright: ignore[reportPrivateUsage]
+            if isinstance(dependency, Provider)
         ]
         if isinstance(parameter.default, Dependency):
             providers.append(parameter.default)  # pyright: ignore[reportUnknownMemberType,reportUnknownArgumentType]

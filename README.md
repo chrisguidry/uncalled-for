@@ -51,8 +51,10 @@ directly is an error. The default form keeps that call legal, which matters to
 type checkers and to callers that skip dependency resolution. A parameter may
 declare its value with a default or with metadata, not both.
 
-Other `Dependency` subclasses in `Annotated` metadata don't supply a value:
-they wrap the call and receive the parameter's value through
+`Depends`, `Shared` and `CallArgument` are `Provider`s. Subclass `Provider`
+instead of `Dependency` for a custom dependency that should supply the value
+from metadata. Other `Dependency` subclasses in `Annotated` metadata don't
+supply a value: they wrap the call and receive the parameter's value through
 `bind_to_parameter`.
 
 ### Side effects

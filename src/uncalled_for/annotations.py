@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Annotated, Any, cast, get_args, get_origin, get_type_hints
 
-from .base import Dependency
+from .base import Dependency, Provider
 
 _metadata_cache: dict[Callable[..., Any], dict[str, list[Dependency[Any]]]] = {}
 _annotation_cache: dict[Callable[..., Any], dict[str, list[Dependency[Any]]]] = {}
@@ -53,16 +53,15 @@ def get_annotation_dependencies(
     ``Annotated[T, Dep()]``.
 
     These dependencies wrap the call but do not supply the parameter's value.
-    ``Depends(...)``, ``Shared(...)`` and ``CallArgument(...)`` metadata do
-    supply the value, so they are reported by ``get_dependency_parameters``
-    instead.
+    ``Provider`` metadata, such as ``Depends(...)``, does supply the value, so
+    it is reported by ``get_dependency_parameters`` instead.
     """
     if function in _annotation_cache:
         return _annotation_cache[function]
 
     result: dict[str, list[Dependency[Any]]] = {}
     for name, dependencies in get_annotated_metadata(function).items():
-        side_effects = [d for d in dependencies if not d._annotated_provides_value]  # pyright: ignore[reportPrivateUsage]
+        side_effects = [d for d in dependencies if not isinstance(d, Provider)]
         if side_effects:
             result[name] = side_effects
 

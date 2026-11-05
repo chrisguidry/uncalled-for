@@ -13,6 +13,7 @@ from uncalled_for import (
     Dependency,
     Depends,
     FailedDependency,
+    Provider,
     Shared,
     SharedContext,
     get_annotation_dependencies,
@@ -336,9 +337,8 @@ async def test_annotated_named_call_argument_in_a_factory() -> None:
 def test_validate_counts_annotated_depends_once() -> None:
     """A value dependency is reported once, not as both kinds of dependency."""
 
-    class Once(Dependency[str]):
+    class Once(Provider[str]):
         single = True
-        _annotated_provides_value = True
 
         async def __aenter__(self) -> str: ...
 
@@ -440,3 +440,54 @@ async def test_caller_value_overrides_annotated_depends_in_wrapper() -> None:
 
     wrapper = without_dependencies(get_user)
     assert await wrapper(email="a", db="mine") == "a via mine"
+
+
+async def test_custom_provider_supplies_value_as_metadata() -> None:
+    class Current(Provider[str]):
+        async def __aenter__(self) -> str:
+            return "current"
+
+    async def handler(value: Annotated[str, Current()]) -> None: ...
+
+    assert set(get_dependency_parameters(handler)) == {"value"}
+    assert get_annotation_dependencies(handler) == {}
+
+    async with resolved_dependencies(handler) as arguments:
+        assert arguments == {"value": "current"}
+
+
+async def test_custom_dependency_wraps_the_call_as_metadata() -> None:
+    entered: list[Any] = []
+
+    class Wrapper(Dependency["Wrapper"]):
+        def bind_to_parameter(self, name: str, value: Any) -> "Wrapper":
+            entered.append(value)
+            return self
+
+        async def __aenter__(self) -> "Wrapper":
+            return self
+
+    async def handler(value: Annotated[int, Wrapper()]) -> None: ...
+
+    assert get_dependency_parameters(handler) == {}
+
+    async with resolved_dependencies(handler, {"value": 3}) as arguments:
+        assert arguments == {}
+    assert entered == [3]
+
+
+def test_bare_provider_class_supplies_value_as_metadata() -> None:
+    class Current(Provider[str]):
+        async def __aenter__(self) -> str: ...
+
+    async def handler(value: Annotated[str, Current]) -> None: ...
+
+    assert isinstance(get_dependency_parameters(handler)["value"], Current)
+
+
+def test_builtin_dependencies_are_providers() -> None:
+    def factory() -> str: ...
+
+    assert isinstance(Depends(factory), Provider)
+    assert isinstance(Shared(factory), Provider)
+    assert isinstance(CallArgument(), Provider)

@@ -12,7 +12,7 @@ from contextlib import (
 from contextvars import ContextVar
 from typing import Any, ClassVar, TypeVar, cast, overload
 
-from .base import Dependency
+from .base import Dependency, Provider
 from .frames import _CallArgument, _stack  # pyright: ignore[reportPrivateUsage]
 from .introspection import get_dependency_parameters
 
@@ -28,11 +28,10 @@ CacheKey = (
 )
 
 
-class _FunctionalDependency(Dependency[R]):
+class _FunctionalDependency(Provider[R]):
     """Base for dependencies that wrap a factory function."""
 
     factory: DependencyFactory[R]
-    _annotated_provides_value = True
 
     def __init__(self, factory: DependencyFactory[R]) -> None:
         self.factory = factory

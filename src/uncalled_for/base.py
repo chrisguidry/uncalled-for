@@ -23,12 +23,6 @@ class Dependency(abc.ABC, Generic[T]):
 
     single: bool = False
 
-    # True for dependencies that supply a parameter's value when they appear
-    # as ``Annotated`` metadata, as ``Depends``, ``Shared`` and
-    # ``CallArgument`` do. Other metadata dependencies wrap the call and
-    # receive the value instead.
-    _annotated_provides_value: bool = False
-
     def bind_to_parameter(self, name: str, value: Any) -> Dependency[T]:
         """Return a copy bound to a parameter's name and value.
 
@@ -59,3 +53,18 @@ class Dependency(abc.ABC, Generic[T]):
         traceback: TracebackType | None,
     ) -> None:
         pass
+
+
+class Provider(Dependency[T]):
+    """A dependency that supplies a parameter's value wherever it is declared.
+
+    As a default, any ``Dependency`` supplies the value. As ``Annotated``
+    metadata, only a ``Provider`` does: ``Annotated[T, Depends(factory)]``
+    resolves like a ``Depends(factory)`` default. Other dependencies in
+    metadata wrap the call and receive the parameter's value through
+    ``bind_to_parameter``.
+
+    ``Depends``, ``Shared`` and ``CallArgument`` are providers. Subclass
+    ``Provider`` instead of ``Dependency`` for a custom dependency that
+    should supply the value when used as metadata.
+    """
