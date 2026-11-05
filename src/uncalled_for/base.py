@@ -53,3 +53,18 @@ class Dependency(abc.ABC, Generic[T]):
         traceback: TracebackType | None,
     ) -> None:
         pass
+
+
+class Provider(Dependency[T]):
+    """A dependency that supplies a parameter's value wherever it is declared.
+
+    As a default, any ``Dependency`` supplies the value. As ``Annotated``
+    metadata, only a ``Provider`` does: ``Annotated[T, Depends(factory)]``
+    resolves like a ``Depends(factory)`` default. Other dependencies in
+    metadata wrap the call and receive the parameter's value through
+    ``bind_to_parameter``.
+
+    ``Depends``, ``Shared`` and ``CallArgument`` are providers. Subclass
+    ``Provider`` instead of ``Dependency`` for a custom dependency that
+    should supply the value when used as metadata.
+    """

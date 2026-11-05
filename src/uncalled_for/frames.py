@@ -8,7 +8,7 @@ from contextlib import AsyncExitStack, contextmanager
 from contextvars import ContextVar
 from typing import Any, cast
 
-from .base import Dependency
+from .base import Dependency, Provider
 from .introspection import get_dependency_parameters, get_signature
 
 _stack: ContextVar[AsyncExitStack] = ContextVar("uncalled_for_stack")
@@ -125,7 +125,7 @@ def frame_scope(
         _current_frame.reset(token)
 
 
-class _CallArgument(Dependency[Any]):
+class _CallArgument(Provider[Any]):
     """Dependency on one argument of the outer function."""
 
     parameter: str | None

@@ -28,6 +28,22 @@ async def handle_request(db: Connection = Depends(get_db)):
 - **Caching** — each dependency resolves once per call, even if referenced multiple times
 - **Call arguments** — a factory can reference the arguments of the call it serves
 
+## Annotated dependencies
+
+`Depends`, `Shared` and `CallArgument` also work as `Annotated` metadata, so
+you can name a dependency once and reuse it:
+
+```python
+DB = Annotated[Connection, Depends(get_db)]
+
+async def handle_request(db: DB):
+    await db.execute("SELECT 1")
+```
+
+This resolves like `db: Connection = Depends(get_db)`, but to Python `db` is
+still a required parameter. A custom dependency supplies a value from metadata
+only if it subclasses `Provider`; other dependencies there wrap the call.
+
 ## Call arguments
 
 A factory sometimes needs a value from the call itself, not from another
