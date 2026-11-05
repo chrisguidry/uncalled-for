@@ -11,10 +11,10 @@ _metadata_cache: dict[Callable[..., object], dict[str, list[Dependency[object]]]
 _annotation_cache: dict[Callable[..., object], dict[str, list[Dependency[object]]]] = {}
 
 
-def get_annotated_metadata(
+def _metadata_dependencies(
     function: Callable[..., object],
 ) -> dict[str, list[Dependency[object]]]:
-    """Find every ``Dependency`` in the ``Annotated`` metadata of a function."""
+    """Find the dependencies in each parameter's ``Annotated`` metadata."""
     if function in _metadata_cache:
         return _metadata_cache[function]
 
@@ -60,7 +60,7 @@ def get_annotation_dependencies(
         return _annotation_cache[function]
 
     result: dict[str, list[Dependency[object]]] = {}
-    for name, dependencies in get_annotated_metadata(function).items():
+    for name, dependencies in _metadata_dependencies(function).items():
         side_effects = [d for d in dependencies if not isinstance(d, Provider)]
         if side_effects:
             result[name] = side_effects

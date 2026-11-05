@@ -5,7 +5,7 @@ from __future__ import annotations
 import inspect
 from collections.abc import Callable
 
-from .annotations import get_annotated_metadata
+from .annotations import _metadata_dependencies  # pyright: ignore[reportPrivateUsage]
 from .base import Dependency, Provider
 
 _signature_cache: dict[Callable[..., object], inspect.Signature] = {}
@@ -43,7 +43,7 @@ def get_dependency_parameters(
 
     dependencies: dict[str, Dependency[object]] = {}
     signature = get_signature(function)
-    metadata = get_annotated_metadata(function)
+    metadata = _metadata_dependencies(function)
 
     for name, parameter in signature.parameters.items():
         providers: list[Dependency[object]] = [
