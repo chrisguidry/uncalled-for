@@ -12,6 +12,7 @@ from .introspection import (
     get_dependency_parameters,
     get_signature,
 )
+from .references import get_call_argument_parameters
 from .resolution import FailedDependency, resolved_dependencies, without_dependencies
 from .shared import Shared, SharedContext
 from .validation import validate_dependencies
@@ -31,6 +32,7 @@ __all__ = [
     "current_frame",
     "frame_scope",
     "get_annotation_dependencies",
+    "get_call_argument_parameters",
     "get_dependency_parameters",
     "get_signature",
     "resolved_dependencies",

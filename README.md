@@ -79,6 +79,11 @@ passed it or another dependency on the outer signature produced it.
 `CallArgument(optional=True)` yields `None` when the outer function has no
 such argument. References that form a cycle raise `CycleError`.
 
+When the outer function doesn't declare the parameter,
+`without_dependencies` adds it to the wrapper's signature as keyword-only,
+required unless the reference has a `default`. Optional references are never
+added.
+
 ## Bindings
 
 `Depends` accepts keyword bindings, so you can wire up an ordinary function

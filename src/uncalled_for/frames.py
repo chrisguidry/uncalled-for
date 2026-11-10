@@ -130,15 +130,24 @@ class _CallArgument(Provider[Any]):
 
     parameter: str | None
     optional: bool
+    default: Any
 
-    def __init__(self, parameter: str | None = None, optional: bool = False) -> None:
+    def __init__(
+        self,
+        parameter: str | None = None,
+        optional: bool = False,
+        default: Any = inspect.Parameter.empty,
+    ) -> None:
+        if optional and default is not inspect.Parameter.empty:
+            raise TypeError("CallArgument takes optional or default, not both")
         self.parameter = parameter
         self.optional = optional
+        self.default = default
 
     def for_parameter(self, name: str) -> Dependency[Any]:
         if self.parameter is not None:
             return self
-        return type(self)(name, self.optional)
+        return type(self)(name, self.optional, self.default)
 
     async def __aenter__(self) -> Any:
         if self.parameter is None:
@@ -153,10 +162,17 @@ class _CallArgument(Provider[Any]):
         except LookupError:
             if self.optional:
                 return None
+            if self.default is not inspect.Parameter.empty:
+                return self.default
             raise
 
 
-def CallArgument(parameter: str | None = None, optional: bool = False) -> Any:
+def CallArgument(
+    parameter: str | None = None,
+    optional: bool = False,
+    *,
+    default: Any = inspect.Parameter.empty,
+) -> Any:
     """Declare a dependency on an argument of the outer function.
 
     The value is whatever the outer function receives for *parameter* on this
@@ -167,6 +183,11 @@ def CallArgument(parameter: str | None = None, optional: bool = False) -> Any:
     on. Set *optional* to True to get None when the outer function has no such
     argument. References that form a cycle raise ``CycleError``, which
     *optional* does not suppress.
+
+    A reference to a parameter the outer function does not declare becomes a
+    keyword-only parameter of ``without_dependencies(outer)``, unless it is
+    *optional*. Give it a *default* to make that parameter optional; the
+    reference also yields *default* when no value arrives.
 
     Do not use this inside a ``Shared`` factory. A shared value outlives the
     call that built it, so it must not read that call's arguments.
@@ -179,4 +200,4 @@ def CallArgument(parameter: str | None = None, optional: bool = False) -> Any:
         async def show(user_id: str, account: Account = Depends(get_account)):
             ...
     """
-    return cast(Any, _CallArgument(parameter, optional))
+    return cast(Any, _CallArgument(parameter, optional, default))
