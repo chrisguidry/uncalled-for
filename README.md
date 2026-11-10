@@ -79,26 +79,10 @@ passed it or another dependency on the outer signature produced it.
 `CallArgument(optional=True)` yields `None` when the outer function has no
 such argument. References that form a cycle raise `CycleError`.
 
-A dependency can also own the argument it reads. When the outer function
-doesn't declare the parameter, `without_dependencies` adds it to the wrapper's
-signature as keyword-only, typed from the dependency's annotation, and passes
-its value only to the dependency:
-
-```python
-def current_workspace(workspace: str | None = CallArgument(default=None)) -> str:
-    return workspace or "default"
-
-async def list_items(resolved: str = Depends(current_workspace)) -> str:
-    return resolved
-
-inspect.signature(without_dependencies(list_items))
-# (*, workspace: str | None = None)
-```
-
-A reference without a `default` adds a required parameter. Optional
-references are never added, so they keep yielding `None`.
-`get_call_argument_parameters(function)` returns the added parameters for
-frameworks that build their own wrappers.
+When the outer function doesn't declare the parameter,
+`without_dependencies` adds it to the wrapper's signature as keyword-only,
+required unless the reference has a `default`. Optional references are never
+added.
 
 ## Bindings
 
