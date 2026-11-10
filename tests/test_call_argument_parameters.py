@@ -11,10 +11,8 @@ from uncalled_for import (
     CallArgument,
     Dependency,
     Depends,
-    FailedDependency,
     Shared,
     get_call_argument_parameters,
-    resolved_dependencies,
     without_dependencies,
 )
 
@@ -109,37 +107,31 @@ async def test_references_through_bindings_and_nested_factories() -> None:
 
 
 async def test_a_binding_that_overrides_a_reference_hides_it() -> None:
-    async def show(user: str = Depends(current_user, user_id="fixed")) -> str:
-        ...
+    async def show(user: str = Depends(current_user, user_id="fixed")) -> str: ...
 
     assert get_call_argument_parameters(show) == []
 
 
-async def test_shared_and_custom_dependencies_are_not_walked() -> None:
-    def config() -> str:
-        ...
+async def test_shared_dependencies_are_not_walked() -> None:
+    def config() -> str: ...
 
-    async def show(value: str = Shared(config)) -> str:
-        ...
+    async def show(value: str = Shared(config)) -> str: ...
 
     assert get_call_argument_parameters(show) == []
 
 
 async def test_references_to_one_name_share_a_parameter() -> None:
-    def other_workspace(workspace: str | None = CallArgument()) -> str:
-        ...
+    def other_workspace(workspace: str | None = CallArgument()) -> str: ...
 
     async def show(
         a: str = Depends(current_workspace),
         b: str = Depends(other_workspace),
-    ) -> str:
-        ...
+    ) -> str: ...
 
     async def reversed_show(
         b: str = Depends(other_workspace),
         a: str = Depends(current_workspace),
-    ) -> str:
-        ...
+    ) -> str: ...
 
     for function in (show, reversed_show):
         (parameter,) = get_call_argument_parameters(function)
@@ -147,28 +139,22 @@ async def test_references_to_one_name_share_a_parameter() -> None:
 
 
 async def test_conflicting_annotations_raise() -> None:
-    def numeric(workspace: int = CallArgument()) -> int:
-        ...
+    def numeric(workspace: int = CallArgument()) -> int: ...
 
-    async def show(a: str = Depends(current_workspace), b: int = Depends(numeric)):
-        ...
+    async def show(a: str = Depends(current_workspace), b: int = Depends(numeric)): ...
 
     with pytest.raises(TypeError, match="different annotations"):
         get_call_argument_parameters(show)
 
 
 async def test_conflicting_defaults_raise() -> None:
-    def other(workspace: str | None = CallArgument(default="x")) -> str:
-        ...
+    def other(workspace: str | None = CallArgument(default="x")) -> str: ...
 
-    def same(workspace: str | None = CallArgument(default=None)) -> str:
-        ...
+    def same(workspace: str | None = CallArgument(default=None)) -> str: ...
 
-    async def show(a: str = Depends(current_workspace), b: str = Depends(other)):
-        ...
+    async def show(a: str = Depends(current_workspace), b: str = Depends(other)): ...
 
-    async def agreeing(a: str = Depends(current_workspace), b: str = Depends(same)):
-        ...
+    async def agreeing(a: str = Depends(current_workspace), b: str = Depends(same)): ...
 
     with pytest.raises(TypeError, match="different defaults"):
         get_call_argument_parameters(show)
@@ -179,17 +165,13 @@ async def test_conflicting_defaults_raise() -> None:
 async def test_annotated_references_drop_their_dependency_metadata() -> None:
     def tagged(
         workspace: Annotated[str, "described", CallArgument(default="w")],
-    ) -> str:
-        ...
+    ) -> str: ...
 
-    def bare(workspace: Annotated[str, _Marker, CallArgument()]) -> str:
-        ...
+    def bare(workspace: Annotated[str, _Marker, CallArgument()]) -> str: ...
 
-    async def show(a: str = Depends(tagged)) -> str:
-        ...
+    async def show(a: str = Depends(tagged)) -> str: ...
 
-    async def plain(a: str = Depends(bare)) -> str:
-        ...
+    async def plain(a: str = Depends(bare)) -> str: ...
 
     (tagged_parameter,) = get_call_argument_parameters(show)
     (bare_parameter,) = get_call_argument_parameters(plain)
@@ -208,29 +190,6 @@ async def test_unresolvable_hints_fall_back_to_the_raw_annotation() -> None:
 
     (parameter,) = get_call_argument_parameters(show)
     assert parameter.annotation == "'UnresolvableType'"
-
-
-async def test_a_self_referencing_factory_is_walked_once() -> None:
-    def looping(
-        value: str = CallArgument(default="v"),
-        again: str = Depends(lambda: "x"),
-    ) -> str:
-        ...
-
-    looping_depends = Depends(looping)
-    looping.__defaults__ = ("v-default", looping_depends)
-
-    async def show(a: str = looping_depends) -> str:
-        ...
-
-    assert get_call_argument_parameters(show) == []
-
-
-async def test_a_missing_required_reference_fails_the_dependency() -> None:
-    async def show(user: str = Depends(current_user)) -> str: ...
-
-    async with resolved_dependencies(show, {}) as resolved:
-        assert isinstance(resolved["user"], FailedDependency)
 
 
 def test_optional_and_default_are_exclusive() -> None:

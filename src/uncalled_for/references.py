@@ -35,7 +35,7 @@ def get_call_argument_parameters(
     declared = get_signature(function).parameters
     parameters: dict[str, inspect.Parameter] = {}
 
-    for owner, name, reference in _references(function, set()):
+    for owner, name, reference in _references(function):
         assert reference.parameter is not None
         if reference.optional or reference.parameter in declared:
             continue
@@ -73,7 +73,6 @@ def get_call_argument_parameters(
 
 def _references(
     function: Callable[..., Any],
-    visiting: set[Callable[..., Any]],
 ) -> Iterator[tuple[Callable[..., Any], str, _CallArgument]]:
     """Yield each call-argument reference reachable from *function*.
 
@@ -81,40 +80,30 @@ def _references(
     which is where its annotation lives.
     """
     for name, dependency in get_dependency_parameters(function).items():
-        yield from _dependency_references(function, name, dependency, visiting)
+        yield from _dependency_references(function, name, dependency)
 
 
 def _dependency_references(
     owner: Callable[..., Any],
     name: str,
     dependency: Dependency[Any],
-    visiting: set[Callable[..., Any]],
 ) -> Iterator[tuple[Callable[..., Any], str, _CallArgument]]:
     bound = dependency.for_parameter(name)
     if isinstance(bound, _CallArgument):
         yield owner, name, bound
         return
-    if not isinstance(bound, _Depends) or bound.factory in visiting:
+    if not isinstance(bound, _Depends):
         return
 
     depends = cast("_Depends[Any]", bound)
-    visiting.add(depends.factory)
-    try:
-        for parameter, inner in get_dependency_parameters(depends.factory).items():
-            if parameter not in depends.bindings:
-                yield from _dependency_references(
-                    depends.factory, parameter, inner, visiting
-                )
-        for parameter, value in depends.bindings.items():
-            if isinstance(value, Dependency):
-                yield from _dependency_references(
-                    depends.factory,
-                    parameter,
-                    cast(Dependency[Any], value),
-                    visiting,
-                )
-    finally:
-        visiting.discard(depends.factory)
+    for parameter, inner in get_dependency_parameters(depends.factory).items():
+        if parameter not in depends.bindings:
+            yield from _dependency_references(depends.factory, parameter, inner)
+    for parameter, value in depends.bindings.items():
+        if isinstance(value, Dependency):
+            yield from _dependency_references(
+                depends.factory, parameter, cast(Dependency[Any], value)
+            )
 
 
 def _annotation(owner: Callable[..., Any], name: str) -> Any:
