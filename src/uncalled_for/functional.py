@@ -136,7 +136,12 @@ def _binding_key(value: Any, name: str) -> Hashable:
         # key uses that name and matches the equivalent explicit form. The
         # runtime type is part of the key so that a subclass with different
         # semantics never shares an entry with the class it extends.
-        return (type(value), value.parameter or name, value.optional)
+        return (
+            type(value),
+            value.parameter or name,
+            value.optional,
+            _binding_key(value.default, name),
+        )
 
     if isinstance(value, _Depends):
         depends = cast("_Depends[Any]", value)

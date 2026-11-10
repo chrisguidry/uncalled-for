@@ -12,6 +12,7 @@ from .annotations import get_annotation_dependencies
 from .frames import frame_scope
 from .functional import _Depends  # pyright: ignore[reportPrivateUsage]
 from .introspection import get_dependency_parameters, get_signature
+from .references import get_call_argument_parameters
 
 
 class FailedDependency:
@@ -75,11 +76,18 @@ def without_dependencies(function: Callable[..., Any]) -> Callable[..., Any]:
     If *function* has no ``Dependency`` defaults, it is returned unchanged.
     Otherwise an async wrapper is returned that resolves dependencies
     automatically and forwards user-supplied keyword arguments.
+
+    The wrapper's signature also gains the parameters from
+    ``get_call_argument_parameters``. Their values reach the dependencies that
+    reference them, never *function* itself.
     """
     dependency_names = set(get_dependency_parameters(function))
     annotation_dependencies = get_annotation_dependencies(function)
     if not dependency_names and not annotation_dependencies:
         return function
+
+    referenced = get_call_argument_parameters(function)
+    referenced_names = {parameter.name for parameter in referenced}
 
     original_signature = get_signature(function)
     filtered_parameters = [
@@ -87,15 +95,26 @@ def without_dependencies(function: Callable[..., Any]) -> Callable[..., Any]:
         for name, p in original_signature.parameters.items()
         if name not in dependency_names
     ]
+    variadic = [
+        p for p in filtered_parameters if p.kind is inspect.Parameter.VAR_KEYWORD
+    ]
+    filtered_parameters = [
+        p for p in filtered_parameters if p.kind is not inspect.Parameter.VAR_KEYWORD
+    ]
     new_signature = original_signature.replace(
-        parameters=filtered_parameters, return_annotation=inspect.Parameter.empty
+        parameters=[*filtered_parameters, *referenced, *variadic],
+        return_annotation=inspect.Parameter.empty,
     )
 
     is_async = inspect.iscoroutinefunction(function)
 
     async def wrapper(**kwargs: Any) -> Any:
         async with resolved_dependencies(function, kwargs) as resolved:
-            all_kwargs = {**resolved, **kwargs}
+            all_kwargs = {
+                name: value
+                for name, value in {**resolved, **kwargs}.items()
+                if name not in referenced_names
+            }
             if is_async:
                 return await function(**all_kwargs)
             return function(**all_kwargs)
@@ -107,6 +126,6 @@ def without_dependencies(function: Callable[..., Any]) -> Callable[..., Any]:
         k: v
         for k, v in function.__annotations__.items()
         if k not in dependency_names and k != "return"
-    }
+    } | {parameter.name: parameter.annotation for parameter in referenced}
 
     return wrapper
