@@ -29,7 +29,6 @@ dependencies = []
 dev = [
     "codespell>=2.4.1",
     "loq>=0.1.0a3",
-    "mypy>=1.14.1",
     "prek>=0.3.1",
     "pyright>=1.1.408",
     "pytest>=9.0.2",
