@@ -7,6 +7,7 @@ from collections.abc import Callable
 from typing import Annotated, cast, get_args, get_origin, get_type_hints
 
 from .base import Dependency, Provider
+from .caching import FunctionCache
 
 if sys.version_info >= (3, 12):
     from typing import TypeAliasType
@@ -36,16 +37,17 @@ def _metadata(hint: object) -> tuple[object, ...]:
     return ()
 
 
-_metadata_cache: dict[Callable[..., object], dict[str, list[Dependency[object]]]] = {}
-_annotation_cache: dict[Callable[..., object], dict[str, list[Dependency[object]]]] = {}
+_metadata_cache: FunctionCache[dict[str, list[Dependency[object]]]] = FunctionCache()
+_annotation_cache: FunctionCache[dict[str, list[Dependency[object]]]] = FunctionCache()
 
 
 def _metadata_dependencies(
     function: Callable[..., object],
 ) -> dict[str, list[Dependency[object]]]:
     """Find the dependencies in each parameter's ``Annotated`` metadata."""
-    if function in _metadata_cache:
-        return _metadata_cache[function]
+    cached = _metadata_cache.get(function)
+    if cached is not None:
+        return cached
 
     result: dict[str, list[Dependency[object]]] = {}
     try:
@@ -83,8 +85,9 @@ def get_annotation_dependencies(
     ``Provider`` metadata, such as ``Depends(...)``, does supply the value, so
     it is reported by ``get_dependency_parameters`` instead.
     """
-    if function in _annotation_cache:
-        return _annotation_cache[function]
+    cached = _annotation_cache.get(function)
+    if cached is not None:
+        return cached
 
     result: dict[str, list[Dependency[object]]] = {}
     for name, dependencies in _metadata_dependencies(function).items():

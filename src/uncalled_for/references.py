@@ -7,11 +7,12 @@ from collections.abc import Callable, Iterator
 from typing import Annotated, Any, cast, get_args, get_origin, get_type_hints
 
 from .base import Dependency
+from .caching import FunctionCache
 from .frames import _CallArgument  # pyright: ignore[reportPrivateUsage]
 from .functional import _Depends  # pyright: ignore[reportPrivateUsage]
 from .introspection import get_dependency_parameters, get_signature
 
-_reference_cache: dict[Callable[..., object], list[inspect.Parameter]] = {}
+_reference_cache: FunctionCache[list[inspect.Parameter]] = FunctionCache()
 
 
 def get_call_argument_parameters(
@@ -29,8 +30,9 @@ def get_call_argument_parameters(
     References to one name share a parameter, which is required if any of them
     is. Different annotations or different defaults raise ``TypeError``.
     """
-    if function in _reference_cache:
-        return _reference_cache[function]
+    cached = _reference_cache.get(function)
+    if cached is not None:
+        return cached
 
     declared = get_signature(function).parameters
     parameters: dict[str, inspect.Parameter] = {}
