@@ -8,7 +8,6 @@ build/
 .coverage
 .coverage.*
 htmlcov/
-.mypy_cache/
 .pyright/
 .ruff_cache/
 .python-version
