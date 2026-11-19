@@ -7,14 +7,16 @@ from collections.abc import Callable
 
 from .annotations import _metadata_dependencies  # pyright: ignore[reportPrivateUsage]
 from .base import Dependency, Provided, Provider
+from .caching import FunctionCache
 
-_signature_cache: dict[Callable[..., object], inspect.Signature] = {}
+_signature_cache: FunctionCache[inspect.Signature] = FunctionCache()
 
 
 def get_signature(function: Callable[..., object]) -> inspect.Signature:
     """Get a cached signature for a function."""
-    if function in _signature_cache:
-        return _signature_cache[function]
+    cached = _signature_cache.get(function)
+    if cached is not None:
+        return cached
 
     signature_attr = getattr(function, "__signature__", None)
     if isinstance(signature_attr, inspect.Signature):
@@ -26,7 +28,7 @@ def get_signature(function: Callable[..., object]) -> inspect.Signature:
     return signature
 
 
-_parameter_cache: dict[Callable[..., object], dict[str, Dependency[object]]] = {}
+_parameter_cache: FunctionCache[dict[str, Dependency[object]]] = FunctionCache()
 
 
 def get_dependency_parameters(
@@ -38,8 +40,9 @@ def get_dependency_parameters(
     ``Annotated`` metadata holds a ``Provider``, such as ``Depends(...)``. The two
     forms are equivalent, and a parameter may use only one of them.
     """
-    if function in _parameter_cache:
-        return _parameter_cache[function]
+    cached = _parameter_cache.get(function)
+    if cached is not None:
+        return cached
 
     dependencies: dict[str, Dependency[object]] = {}
     signature = get_signature(function)
